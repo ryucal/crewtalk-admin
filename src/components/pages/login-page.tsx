@@ -1,0 +1,125 @@
+"use client";
+
+import { useState } from "react";
+import { loginWithEmail } from "@/lib/firebase/auth";
+import { getCurrentUserProfile, isAdmin } from "@/lib/firebase/auth";
+
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email || !password) {
+      setError("이메일과 비밀번호를 입력해 주세요.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await loginWithEmail(email, password);
+      const profile = await getCurrentUserProfile();
+      if (!profile || !isAdmin(profile)) {
+        setError("관리자 권한이 없습니다. superAdmin 권한이 필요합니다.");
+        const { signOut } = await import("firebase/auth");
+        const { auth } = await import("@/lib/firebase/config");
+        await signOut(auth);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "로그인에 실패했습니다.";
+      if (message.includes("auth/invalid-credential") || message.includes("auth/wrong-password")) {
+        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      } else if (message.includes("auth/user-not-found")) {
+        setError("등록되지 않은 계정입니다.");
+      } else {
+        setError(message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-bg flex items-center justify-center">
+      <div className="w-[400px]">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <div className="w-14 h-14 bg-accent rounded-2xl flex items-center justify-center text-xl font-bold text-white mx-auto mb-4 shadow-lg">
+            CT
+          </div>
+          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">
+            크루톡 관리자
+          </h1>
+          <p className="text-sm text-text-tertiary mt-1">
+            관리자 콘솔에 로그인하세요
+          </p>
+        </div>
+
+        {/* Login Form */}
+        <div className="bg-surface border border-border rounded-xl p-6 shadow-sm">
+          <form onSubmit={handleSubmit}>
+            <div className="mb-4">
+              <label className="text-[11px] font-medium text-text-secondary block mb-1.5">
+                이메일
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError("");
+                }}
+                placeholder="admin@crewtalk.co.kr"
+                className="w-full px-3 py-2.5 border border-border-md rounded-md text-sm outline-none focus:border-accent bg-surface font-sans transition-colors"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="text-[11px] font-medium text-text-secondary block mb-1.5">
+                비밀번호
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setError("");
+                }}
+                placeholder="••••••••"
+                className="w-full px-3 py-2.5 border border-border-md rounded-md text-sm outline-none focus:border-accent bg-surface font-sans transition-colors"
+              />
+            </div>
+
+            {error && (
+              <div className="mb-4 text-xs text-danger bg-danger-light px-3 py-2 rounded-md">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-2.5 rounded-md text-sm font-medium bg-accent text-white hover:bg-accent-dark transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "로그인 중..." : "로그인"}
+            </button>
+          </form>
+
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-[11px] text-text-tertiary text-center">
+              superAdmin 권한이 필요합니다.
+              <br />
+              접근 권한이 없다면 관리자에게 문의하세요.
+            </p>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-text-tertiary text-center mt-6">
+          CrewTalk Admin Console v1.0
+        </p>
+      </div>
+    </div>
+  );
+}
