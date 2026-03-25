@@ -43,6 +43,20 @@ export interface Company {
   mode?: "normal" | "summary";
 }
 
+/** 팀 공유 업무 달력 (Firestore config/workspace_calendar) */
+export interface WorkspaceCalendarItem {
+  id: string;
+  title: string;
+  kind: "schedule" | "todo";
+  /** YYYY-MM-DD */
+  date: string;
+  /** 포함 종료일 (기간 일정용, 없으면 단일일) */
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  done?: boolean;
+}
+
 export interface Vehicle {
   id: number;
   carNumber: string;

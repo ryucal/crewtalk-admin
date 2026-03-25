@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { Sunrise, Sunset, Clock, ClipboardList, X } from "lucide-react";
 import { getRooms, getDrivers, getCompanies, getAllReportsByDate, getAllEmergencies } from "@/lib/firebase/firestore";
 import { getMessages } from "@/lib/firebase/firestore";
-import { getAvatarTheme, formatDate } from "@/lib/mock-data";
+import { formatDate } from "@/lib/mock-data";
+import WorkspaceCalendarPanel from "@/components/workspace-calendar-panel";
 import type { Room, Driver, Company, ReportMessage, EmergencyMessage, ChatMessage } from "@/lib/types";
 
 function StatCard({
@@ -117,7 +118,6 @@ function RouteBar({
 export default function DashboardPage() {
   const [liveTime, setLiveTime] = useState("");
   const [showAllRoutes, setShowAllRoutes] = useState(false);
-  const [showAllDrivers, setShowAllDrivers] = useState(false);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -159,7 +159,6 @@ export default function DashboardPage() {
         setCompanies(companiesData);
 
         const normalRooms = roomsData.filter((r) => r.id < 998);
-        const today = getTodayDate();
 
         // 최근 7일 인원보고 (기사·차량관리와 동일한 차량번호 노출용)
         const datePromises = Array.from({ length: 7 }, (_, i) => {
@@ -195,22 +194,6 @@ export default function DashboardPage() {
 
   const today = getTodayDate();
   const todayReports = reports.filter((r) => r.date === today);
-
-  // 기사별 최신 인원보고의 차량번호 (기사·차량관리와 동일한 노출 규칙)
-  const latestCarByDriver = reports
-    .filter((r) => r.car)
-    .sort((a, b) => {
-      const dateCompare = (b.date || "").localeCompare(a.date || "");
-      if (dateCompare !== 0) return dateCompare;
-      return (b.time || "").localeCompare(a.time || "");
-    })
-    .reduce<Record<string, string>>((acc, r) => {
-      if (!acc[r.name]) acc[r.name] = r.car;
-      return acc;
-    }, {});
-
-  const getDisplayCar = (driver: Driver) =>
-    driver.car || latestCarByDriver[driver.name] || null;
 
   const morningReports = todayReports.filter((r) => r.reportData?.type === "출근");
   const eveningReports = todayReports.filter((r) => r.reportData?.type === "퇴근");
@@ -294,12 +277,14 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Mid Grid */}
-      <div className="grid grid-cols-[1.6fr_1fr] gap-3.5 mb-3.5">
+      {/* Mid Grid — 팀 업무 달력 2/3, 노선별 탑승 현황 1/3 */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-3.5 mb-3.5">
+        <WorkspaceCalendarPanel />
+
         {/* Route Status */}
-        <div className="bg-surface border border-border rounded-[10px] p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3.5">
-            <span className="text-[13px] font-semibold text-text-primary">
+        <div className="bg-surface border border-border rounded-[10px] p-4 shadow-sm min-w-0">
+          <div className="flex items-center justify-between mb-3.5 gap-2">
+            <span className="text-[13px] font-semibold text-text-primary min-w-0">
               노선별 탑승 현황
               <span className="text-[11px] font-normal text-text-tertiary ml-1.5">
                 상위 6개 노선
@@ -308,7 +293,7 @@ export default function DashboardPage() {
             {remainingRoutes.length > 0 && (
               <button
                 onClick={() => setShowAllRoutes(true)}
-                className="text-[11px] text-accent font-medium cursor-pointer hover:opacity-70 transition-opacity"
+                className="text-[11px] text-accent font-medium cursor-pointer hover:opacity-70 transition-opacity shrink-0"
               >
                 전체 보기 ({routeData.length}개) →
               </button>
@@ -317,59 +302,6 @@ export default function DashboardPage() {
           {topRoutes.map((r) => (
             <RouteBar key={r.name} {...r} maxTotal={maxRouteTotal} />
           ))}
-        </div>
-
-        {/* Driver Status */}
-        <div className="bg-surface border border-border rounded-[10px] p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-3.5">
-            <span className="text-[13px] font-semibold text-text-primary">
-              기사 현황
-            </span>
-            <button
-              onClick={() => setShowAllDrivers(true)}
-              className="text-[11px] text-accent font-medium cursor-pointer hover:opacity-70 transition-opacity"
-            >
-              전체 보기 ({drivers.length}명) →
-            </button>
-          </div>
-          {drivers.slice(0, 5).map((driver) => {
-            const theme = getAvatarTheme(driver.name);
-            const report = todayReports.find((r) => r.name === driver.name);
-            const status = report && report.reportData
-              ? report.reportData.type
-              : "미보고";
-            const statusClass =
-              status === "미보고"
-                ? "bg-danger-light text-danger"
-                : "bg-accent-light text-accent";
-
-            return (
-              <div
-                key={driver.id}
-                className="flex items-center gap-2.5 py-[7px] border-b border-border last:border-b-0"
-              >
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0"
-                  style={{ background: theme.bg, color: theme.fg }}
-                >
-                  {driver.name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-medium text-text-primary">
-                    {driver.name}
-                  </div>
-                  <div className="text-[11px] text-text-tertiary">
-                    {getDisplayCar(driver) || "—"}
-                  </div>
-                </div>
-                <span
-                  className={`text-[10px] font-medium px-2 py-[3px] rounded-full whitespace-nowrap ${statusClass}`}
-                >
-                  {status}
-                </span>
-              </div>
-            );
-          })}
         </div>
       </div>
 
@@ -582,78 +514,6 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* All Drivers Modal */}
-      {showAllDrivers && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-surface rounded-xl p-6 w-[480px] max-h-[80vh] shadow-lg animate-fade-in flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-semibold text-text-primary">
-                  전체 기사 현황
-                </h2>
-                <p className="text-[11px] text-text-tertiary mt-0.5">
-                  총 {drivers.length}명
-                </p>
-              </div>
-              <button
-                onClick={() => setShowAllDrivers(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-bg transition-colors cursor-pointer text-text-tertiary hover:text-text-primary"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <div className="space-y-0">
-                {drivers.map((driver) => {
-                  const theme = getAvatarTheme(driver.name);
-                  const report = todayReports.find((r) => r.name === driver.name);
-                  const status = report && report.reportData
-                    ? report.reportData.type
-                    : "미보고";
-                  const statusClass =
-                    status === "미보고"
-                      ? "bg-danger-light text-danger"
-                      : "bg-accent-light text-accent";
-                  return (
-                    <div
-                      key={driver.id}
-                      className="flex items-center gap-2.5 py-[10px] px-2 border-b border-border last:border-b-0 hover:bg-bg/50 rounded-md transition-colors"
-                    >
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
-                        style={{ background: theme.bg, color: theme.fg }}
-                      >
-                        {driver.name.charAt(0)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-text-primary">
-                          {driver.name}
-                        </div>
-                        <div className="text-[11px] text-text-tertiary">
-                          {getDisplayCar(driver) || "—"}
-                        </div>
-                      </div>
-                      <span
-                        className={`text-[11px] font-medium px-2.5 py-[4px] rounded-full whitespace-nowrap ${statusClass}`}
-                      >
-                        {status}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="mt-4 pt-3 border-t border-border">
-              <button
-                onClick={() => setShowAllDrivers(false)}
-                className="w-full px-4 py-2 rounded-md text-xs font-medium border border-border-md bg-surface text-text-secondary hover:bg-bg cursor-pointer"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

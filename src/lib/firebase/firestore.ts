@@ -17,7 +17,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { db } from './config';
-import type { Driver, Room, Company, ChatMessage, ReportMessage, EnrichedReportMessage, EmergencyMessage, Track, TrackPoint } from '@/lib/types';
+import type { Driver, Room, Company, ChatMessage, ReportMessage, EnrichedReportMessage, EmergencyMessage, Track, TrackPoint, WorkspaceCalendarItem } from '@/lib/types';
 
 // ===== Drivers (기사) =====
 
@@ -154,6 +154,41 @@ export async function updateCompanies(companies: Company[]) {
     console.error('Error updating companies:', error);
     throw error;
   }
+}
+
+// ===== Workspace calendar (팀 공유 일정·할일) =====
+
+const WORKSPACE_CALENDAR_DOC = doc(db, 'config', 'workspace_calendar');
+
+/**
+ * 팀 업무 달력 실시간 구독 (팀원 간 동기화)
+ */
+export function subscribeWorkspaceCalendar(
+  onItems: (items: WorkspaceCalendarItem[]) => void,
+  onError?: (e: Error) => void
+): () => void {
+  return onSnapshot(
+    WORKSPACE_CALENDAR_DOC,
+    (snap) => {
+      const items = (snap.exists() ? snap.data().items : []) as WorkspaceCalendarItem[];
+      onItems(Array.isArray(items) ? items : []);
+    },
+    (err) => {
+      console.error('workspace_calendar snapshot error:', err);
+      onError?.(err as Error);
+    }
+  );
+}
+
+/**
+ * 팀 업무 달력 일괄 저장 (관리자만 규칙상 쓰기 가능)
+ */
+export async function updateWorkspaceCalendarItems(items: WorkspaceCalendarItem[]) {
+  await setDoc(
+    WORKSPACE_CALENDAR_DOC,
+    { items: stripUndefined(items), updatedAt: serverTimestamp() },
+    { merge: true }
+  );
 }
 
 // ===== Messages (채팅 메시지) =====
