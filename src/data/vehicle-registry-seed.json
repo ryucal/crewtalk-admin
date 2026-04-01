@@ -1,0 +1,992 @@
+[
+  {
+    "id": "seed-csv-0001",
+    "company": "크루버스",
+    "carNumber": "경기79사1829",
+    "driverName": "이종연",
+    "phone": "010-2540-7940"
+  },
+  {
+    "id": "seed-csv-0002",
+    "company": "크루버스",
+    "carNumber": "경기74자7787",
+    "driverName": "윤선상",
+    "phone": "010-8402-6908"
+  },
+  {
+    "id": "seed-csv-0003",
+    "company": "크루버스",
+    "carNumber": "경기70사7586",
+    "driverName": "박상승",
+    "phone": "010-7537-2213"
+  },
+  {
+    "id": "seed-csv-0004",
+    "company": "크루버스",
+    "carNumber": "경기79사2546",
+    "driverName": "한광일",
+    "phone": "010-2238-5286"
+  },
+  {
+    "id": "seed-csv-0005",
+    "company": "크루버스",
+    "carNumber": "경기73아2981",
+    "driverName": "송요주",
+    "phone": "010-8750-9468"
+  },
+  {
+    "id": "seed-csv-0006",
+    "company": "크루버스",
+    "carNumber": "경기79사1824",
+    "driverName": "김지수",
+    "phone": "010-2357-4170"
+  },
+  {
+    "id": "seed-csv-0007",
+    "company": "크루버스",
+    "carNumber": "경기76아3169",
+    "driverName": "조병연",
+    "phone": "010-3321-9400"
+  },
+  {
+    "id": "seed-csv-0008",
+    "company": "크루버스",
+    "carNumber": "경기72아6310",
+    "driverName": "강찬희",
+    "phone": "010-2336-4211",
+    "note": "퇴사예정"
+  },
+  {
+    "id": "seed-csv-0009",
+    "company": "크루버스",
+    "carNumber": "경기78아6074",
+    "driverName": "김태화",
+    "phone": "010-2449-8684",
+    "note": "반장기사"
+  },
+  {
+    "id": "seed-csv-0010",
+    "company": "크루버스",
+    "carNumber": "경기78아9298",
+    "driverName": "최민철",
+    "phone": "010-5323-8071"
+  },
+  {
+    "id": "seed-csv-0011",
+    "company": "크루버스",
+    "carNumber": "경기76아9499",
+    "driverName": "유인택",
+    "phone": "010-2281-7708"
+  },
+  {
+    "id": "seed-csv-0012",
+    "company": "크루버스",
+    "carNumber": "경기70바8437",
+    "driverName": "배귀찬",
+    "phone": "010-6258-3117"
+  },
+  {
+    "id": "seed-csv-0013",
+    "company": "크루버스",
+    "carNumber": "경기77아7804",
+    "driverName": "김문구",
+    "phone": "010-8257-9112"
+  },
+  {
+    "id": "seed-csv-0014",
+    "company": "크루버스",
+    "carNumber": "경기78아6071",
+    "driverName": "서윤석",
+    "phone": "010-6580-1957"
+  },
+  {
+    "id": "seed-csv-0015",
+    "company": "크루버스",
+    "carNumber": "경기76사4927",
+    "driverName": "박경호",
+    "phone": "010-3203-2682"
+  },
+  {
+    "id": "seed-csv-0016",
+    "company": "크루버스",
+    "carNumber": "경기77아5658",
+    "driverName": "이종호",
+    "phone": "010-3923-8949"
+  },
+  {
+    "id": "seed-csv-0017",
+    "company": "크루버스",
+    "carNumber": "경기73사2918",
+    "driverName": "곽창호",
+    "phone": "010-6328-1676"
+  },
+  {
+    "id": "seed-csv-0018",
+    "company": "크루버스",
+    "carNumber": "경기79사4209",
+    "driverName": "이상인",
+    "phone": "010-5221-0143",
+    "note": "전일권 퇴사"
+  },
+  {
+    "id": "seed-csv-0019",
+    "company": "크루버스",
+    "carNumber": "경기73사3229",
+    "driverName": "정현택",
+    "phone": "010-3466-8641",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0020",
+    "company": "크루버스",
+    "carNumber": "경기73아2616",
+    "driverName": "안이진",
+    "phone": "010-5577-5054",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0021",
+    "company": "크루버스",
+    "carNumber": "경기74자7215",
+    "driverName": "서용희",
+    "phone": "010-4303-0770",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0022",
+    "company": "크루버스",
+    "carNumber": "경기76사5264",
+    "driverName": "유명환",
+    "phone": "010-5269-4373",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0023",
+    "company": "크루버스",
+    "carNumber": "경기78아9299",
+    "driverName": "이재영",
+    "phone": "010-2212-5554",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0024",
+    "company": "크루버스",
+    "carNumber": "경기78사8325",
+    "driverName": "김용소",
+    "phone": "010-5392-2586",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0025",
+    "company": "크루버스",
+    "carNumber": "경기78아9294",
+    "driverName": "양우진",
+    "phone": "010-8005-5838",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0026",
+    "company": "크루버스",
+    "carNumber": "경기78아6070",
+    "driverName": "원태연",
+    "phone": "010-9429-3922",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0027",
+    "company": "더크루버스",
+    "carNumber": "경기79사1925",
+    "driverName": "이상철",
+    "phone": "010-6272-3314",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0028",
+    "company": "더크루버스",
+    "carNumber": "경기78아6076",
+    "driverName": "안승원",
+    "phone": "010-2244-2973",
+    "note": "지입기사"
+  },
+  {
+    "id": "seed-csv-0029",
+    "company": "더크루버스",
+    "carNumber": "경기76아8888",
+    "driverName": "임정택",
+    "phone": "010-9179-1470"
+  },
+  {
+    "id": "seed-csv-0030",
+    "company": "더크루버스",
+    "carNumber": "경기73사1417",
+    "driverName": "양해준",
+    "phone": "010-8741-5793"
+  },
+  {
+    "id": "seed-csv-0031",
+    "company": "더크루버스",
+    "carNumber": "경기71바4595",
+    "driverName": "이춘규",
+    "phone": "010-3373-7181"
+  },
+  {
+    "id": "seed-csv-0032",
+    "company": "더크루버스",
+    "carNumber": "경기79사2882",
+    "driverName": "곽진규",
+    "phone": "010-8414-6143"
+  },
+  {
+    "id": "seed-csv-0033",
+    "company": "더크루버스",
+    "carNumber": "경기70사7562",
+    "driverName": "이상현",
+    "phone": "010-5177-7228"
+  },
+  {
+    "id": "seed-csv-0034",
+    "company": "더크루버스",
+    "carNumber": "경기70사7558",
+    "driverName": "임태봉",
+    "phone": "010-3339-9590"
+  },
+  {
+    "id": "seed-csv-0035",
+    "company": "더크루버스",
+    "carNumber": "경기70사7559",
+    "driverName": "박상덕",
+    "phone": "010-8875-8056"
+  },
+  {
+    "id": "seed-csv-0036",
+    "company": "더크루버스",
+    "carNumber": "경기71아8624",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0037",
+    "company": "더크루버스",
+    "carNumber": "경기71아8605",
+    "driverName": "정지혁",
+    "phone": "010-3902-5393"
+  },
+  {
+    "id": "seed-csv-0038",
+    "company": "더크루버스",
+    "carNumber": "경기76아3316",
+    "driverName": "이능주",
+    "phone": "010-5329-2353"
+  },
+  {
+    "id": "seed-csv-0039",
+    "company": "더크루버스",
+    "carNumber": "경기70사7565",
+    "driverName": "박해준",
+    "phone": "010-4758-1159"
+  },
+  {
+    "id": "seed-csv-0040",
+    "company": "더크루버스",
+    "carNumber": "경기73아8590",
+    "driverName": "최칠규",
+    "phone": "010-6245-1654"
+  },
+  {
+    "id": "seed-csv-0041",
+    "company": "더크루버스",
+    "carNumber": "경기71바7828",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0042",
+    "company": "더크루버스",
+    "carNumber": "경기70아6182",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0043",
+    "company": "더크루버스",
+    "carNumber": "경기79사1839",
+    "driverName": "이동구",
+    "phone": "010-3553-9411"
+  },
+  {
+    "id": "seed-csv-0044",
+    "company": "더크루버스",
+    "carNumber": "경기76자3940",
+    "driverName": "조병연",
+    "phone": "010-3321-9400"
+  },
+  {
+    "id": "seed-csv-0045",
+    "company": "더크루버스",
+    "carNumber": "경기76자3947",
+    "driverName": "서명관",
+    "phone": "010-9063-7248"
+  },
+  {
+    "id": "seed-csv-0046",
+    "company": "더크루버스",
+    "carNumber": "경기76자3955",
+    "driverName": "정준우",
+    "phone": "010-4967-4005"
+  },
+  {
+    "id": "seed-csv-0047",
+    "company": "더크루버스",
+    "carNumber": "경기76자3956",
+    "driverName": "송선욱",
+    "phone": "010-8414-6646"
+  },
+  {
+    "id": "seed-csv-0048",
+    "company": "더크루버스",
+    "carNumber": "경기76자3953",
+    "driverName": "양민규",
+    "phone": "010-9331-7224"
+  },
+  {
+    "id": "seed-csv-0049",
+    "company": "더크루버스",
+    "carNumber": "경기76자3946",
+    "driverName": "최준석",
+    "phone": "010-3352-1627"
+  },
+  {
+    "id": "seed-csv-0050",
+    "company": "더크루버스",
+    "carNumber": "경기76자3945",
+    "driverName": "이창솔",
+    "phone": "010-4399-7241"
+  },
+  {
+    "id": "seed-csv-0051",
+    "company": "더크루버스",
+    "carNumber": "경기76사3123",
+    "driverName": "김대일",
+    "phone": "010-3443-7925"
+  },
+  {
+    "id": "seed-csv-0052",
+    "company": "더크루버스",
+    "carNumber": "경기76아3264",
+    "driverName": "박철주",
+    "phone": "010-6349-9466"
+  },
+  {
+    "id": "seed-csv-0053",
+    "company": "더크루버스",
+    "carNumber": "경기73아4121",
+    "driverName": "정태하",
+    "phone": "010-9015-1663",
+    "note": "지입기사예정(안효영기사님기사)"
+  },
+  {
+    "id": "seed-csv-0054",
+    "company": "더크루버스",
+    "carNumber": "경기73아4122",
+    "driverName": "정소영",
+    "phone": "010-5237-2053",
+    "note": "지입기사예정"
+  },
+  {
+    "id": "seed-csv-0055",
+    "company": "더크루버스",
+    "carNumber": "경기73아4123",
+    "driverName": "안효영",
+    "phone": "010-7235-9331",
+    "note": "지입기사예정"
+  },
+  {
+    "id": "seed-csv-0056",
+    "company": "더크루버스",
+    "carNumber": "경기73아4124",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0057",
+    "company": "더크루버스",
+    "carNumber": "경기73아4125",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0058",
+    "company": "가자고",
+    "carNumber": "경기74아7032",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0059",
+    "company": "가자고",
+    "carNumber": "경기76바8195",
+    "driverName": "변형규",
+    "phone": "010-9116-6974",
+    "note": "크루버스기사"
+  },
+  {
+    "id": "seed-csv-0060",
+    "company": "가자고",
+    "carNumber": "경기76바7218",
+    "driverName": "김봉섭",
+    "phone": "010-2335-6351",
+    "note": "크루버스투어기사"
+  },
+  {
+    "id": "seed-csv-0061",
+    "company": "가자고",
+    "carNumber": "경기79사2072",
+    "driverName": "",
+    "phone": "",
+    "note": "크루버스투어기사"
+  },
+  {
+    "id": "seed-csv-0062",
+    "company": "가자고",
+    "carNumber": "경기78사7659",
+    "driverName": "김승환",
+    "phone": "010-2388-9533",
+    "note": "크루버스투어기사"
+  },
+  {
+    "id": "seed-csv-0063",
+    "company": "가자고",
+    "carNumber": "경기77아6385",
+    "driverName": "",
+    "phone": "",
+    "note": "크루버스투어기사"
+  },
+  {
+    "id": "seed-csv-0064",
+    "company": "가자고",
+    "carNumber": "경기75아6026",
+    "driverName": "정성철",
+    "phone": "010-5356-0250"
+  },
+  {
+    "id": "seed-csv-0065",
+    "company": "가자고",
+    "carNumber": "경기78아7004",
+    "driverName": "강동해",
+    "phone": "010-2775-5666"
+  },
+  {
+    "id": "seed-csv-0066",
+    "company": "가자고",
+    "carNumber": "경기79사4710",
+    "driverName": "심재록",
+    "phone": "010-9939-1297"
+  },
+  {
+    "id": "seed-csv-0067",
+    "company": "가자고",
+    "carNumber": "경기77아9067",
+    "driverName": "최승록",
+    "phone": "010-6341-7272"
+  },
+  {
+    "id": "seed-csv-0068",
+    "company": "가자고",
+    "carNumber": "경기76바9132",
+    "driverName": "박성환",
+    "phone": "010-3454-2994"
+  },
+  {
+    "id": "seed-csv-0069",
+    "company": "가자고",
+    "carNumber": "경기77아7043",
+    "driverName": "전현철",
+    "phone": "010-8348-1619"
+  },
+  {
+    "id": "seed-csv-0070",
+    "company": "가자고",
+    "carNumber": "경기79사2696",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0071",
+    "company": "가자고",
+    "carNumber": "경기76바7218",
+    "driverName": "신상호",
+    "phone": "010-4430-2988",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0072",
+    "company": "가자고",
+    "carNumber": "경기71아8628",
+    "driverName": "염길룡",
+    "phone": "010-7295-2777"
+  },
+  {
+    "id": "seed-csv-0073",
+    "company": "가자고",
+    "carNumber": "경기76아2317",
+    "driverName": "오희성",
+    "phone": "010-8642-8686"
+  },
+  {
+    "id": "seed-csv-0074",
+    "company": "아주고속",
+    "carNumber": "경기76사4756",
+    "driverName": "차인우",
+    "phone": "010-9765-0726",
+    "note": "기좌리"
+  },
+  {
+    "id": "seed-csv-0075",
+    "company": "아주고속",
+    "carNumber": "경기78아9593",
+    "driverName": "김두홍",
+    "phone": "010-2678-2279",
+    "note": "이천"
+  },
+  {
+    "id": "seed-csv-0076",
+    "company": "아주고속",
+    "carNumber": "경기79사3549",
+    "driverName": "문한도",
+    "phone": "010-9286-5740",
+    "note": "이천"
+  },
+  {
+    "id": "seed-csv-0077",
+    "company": "케이오림",
+    "carNumber": "경기77바4028",
+    "driverName": "이강노",
+    "phone": "010-4597-9849",
+    "note": "이천,골든"
+  },
+  {
+    "id": "seed-csv-0078",
+    "company": "케이오림",
+    "carNumber": "경기78사9643",
+    "driverName": "김건중/이관영",
+    "phone": "010-4969-5514 / 010-6335-8227",
+    "note": "리조트"
+  },
+  {
+    "id": "seed-csv-0079",
+    "company": "케이오림",
+    "carNumber": "경기78아9855",
+    "driverName": "신상연/김용섭",
+    "phone": "010-9142-7416 / 010-8628-8590",
+    "note": "리조트"
+  },
+  {
+    "id": "seed-csv-0080",
+    "company": "케이오림",
+    "carNumber": "경기78사8328",
+    "driverName": "김대현",
+    "phone": "010-2806-2951",
+    "note": "리조트"
+  },
+  {
+    "id": "seed-csv-0081",
+    "company": "케이오림",
+    "carNumber": "경기79사2252",
+    "driverName": "서정섭",
+    "phone": "010-2489-2320",
+    "note": "백암"
+  },
+  {
+    "id": "seed-csv-0082",
+    "company": "케이오림",
+    "carNumber": "경기79사4167",
+    "driverName": "최규성",
+    "phone": "010-9744-3271",
+    "note": "리조트"
+  },
+  {
+    "id": "seed-csv-0083",
+    "company": "케이오림",
+    "carNumber": "경기70사9067",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0084",
+    "company": "송호관광",
+    "carNumber": "경기78사8290",
+    "driverName": "김주영",
+    "phone": "010-3695-7888"
+  },
+  {
+    "id": "seed-csv-0085",
+    "company": "송호관광",
+    "carNumber": "경기76자3954",
+    "driverName": "손주현",
+    "phone": "010-7376-7118"
+  },
+  {
+    "id": "seed-csv-0086",
+    "company": "송호관광",
+    "carNumber": "경기73아8344",
+    "driverName": "김기배",
+    "phone": "010-3949-9914"
+  },
+  {
+    "id": "seed-csv-0087",
+    "company": "송호관광",
+    "carNumber": "경기70바7267",
+    "driverName": "배춘섭",
+    "phone": "010-8708-3645"
+  },
+  {
+    "id": "seed-csv-0088",
+    "company": "송호관광",
+    "carNumber": "경기76아2301",
+    "driverName": "강준식",
+    "phone": "010-7128-8988"
+  },
+  {
+    "id": "seed-csv-0089",
+    "company": "송호관광",
+    "carNumber": "강원70바4041",
+    "driverName": "이강석",
+    "phone": "010-8888-7767"
+  },
+  {
+    "id": "seed-csv-0090",
+    "company": "송호관광",
+    "carNumber": "경기79바7972",
+    "driverName": "박용덕",
+    "phone": "010-4238-0896"
+  },
+  {
+    "id": "seed-csv-0091",
+    "company": "송호관광",
+    "carNumber": "경기78아6363",
+    "driverName": "최재완",
+    "phone": "010-6456-5488"
+  },
+  {
+    "id": "seed-csv-0092",
+    "company": "송호관광",
+    "carNumber": "경기78아6364",
+    "driverName": "박덕준",
+    "phone": "010-3861-8290"
+  },
+  {
+    "id": "seed-csv-0093",
+    "company": "송호관광",
+    "carNumber": "경기76아2306",
+    "driverName": "최지연",
+    "phone": "010-9692-8001"
+  },
+  {
+    "id": "seed-csv-0094",
+    "company": "송호관광",
+    "carNumber": "경기79바7971",
+    "driverName": "이정호",
+    "phone": "010-5340-3600"
+  },
+  {
+    "id": "seed-csv-0095",
+    "company": "송호관광",
+    "carNumber": "경기78아5030",
+    "driverName": "강송식",
+    "phone": "010-6776-0073"
+  },
+  {
+    "id": "seed-csv-0096",
+    "company": "송호관광",
+    "carNumber": "경기77바7367",
+    "driverName": "김학면",
+    "phone": "010-8920-7220"
+  },
+  {
+    "id": "seed-csv-0097",
+    "company": "송호관광",
+    "carNumber": "경기73아4119",
+    "driverName": "강보형",
+    "phone": "010-4626-4270"
+  },
+  {
+    "id": "seed-csv-0098",
+    "company": "송호관광",
+    "carNumber": "경기71자7425",
+    "driverName": "이운재",
+    "phone": "010-4139-0101",
+    "note": "뉴월드 지입"
+  },
+  {
+    "id": "seed-csv-0099",
+    "company": "송호관광",
+    "carNumber": "경기79바7967",
+    "driverName": "",
+    "phone": "",
+    "note": "예비차량"
+  },
+  {
+    "id": "seed-csv-0100",
+    "company": "강남",
+    "carNumber": "경기72아6182",
+    "driverName": "배승찬",
+    "phone": "010-8177-0111"
+  },
+  {
+    "id": "seed-csv-0101",
+    "company": "강남",
+    "carNumber": "경기72아7716",
+    "driverName": "이지민",
+    "phone": "010-7186-3105"
+  },
+  {
+    "id": "seed-csv-0102",
+    "company": "강남",
+    "carNumber": "경기72아6191",
+    "driverName": "강예정",
+    "phone": "010-8769-6234"
+  },
+  {
+    "id": "seed-csv-0103",
+    "company": "강남",
+    "carNumber": "경기72아7668",
+    "driverName": "박세영",
+    "phone": "010-2449-8888"
+  },
+  {
+    "id": "seed-csv-0104",
+    "company": "강남",
+    "carNumber": "경기79사4897",
+    "driverName": "박재신",
+    "phone": "010-4580-2689"
+  },
+  {
+    "id": "seed-csv-0105",
+    "company": "강남",
+    "carNumber": "경기72아6185",
+    "driverName": "박상봉",
+    "phone": "010-2508-3129"
+  },
+  {
+    "id": "seed-csv-0106",
+    "company": "강남",
+    "carNumber": "경기79사3652",
+    "driverName": "안준우",
+    "phone": "010-6394-0557"
+  },
+  {
+    "id": "seed-csv-0107",
+    "company": "강남",
+    "carNumber": "경기78바1318",
+    "driverName": "김성수",
+    "phone": "010-3945-1130"
+  },
+  {
+    "id": "seed-csv-0108",
+    "company": "강남",
+    "carNumber": "경기79사4039",
+    "driverName": "심민수",
+    "phone": "010-9186-5419"
+  },
+  {
+    "id": "seed-csv-0109",
+    "company": "강남",
+    "carNumber": "경기79사1910",
+    "driverName": "박인수",
+    "phone": "010-6303-5367"
+  },
+  {
+    "id": "seed-csv-0110",
+    "company": "강남",
+    "carNumber": "경기76자3684",
+    "driverName": "류준선",
+    "phone": "010-8591-1388"
+  },
+  {
+    "id": "seed-csv-0111",
+    "company": "강남",
+    "carNumber": "경기79사1916",
+    "driverName": "유영재",
+    "phone": "010-5378-0978"
+  },
+  {
+    "id": "seed-csv-0112",
+    "company": "강남",
+    "carNumber": "경기73아3432",
+    "driverName": "윤홍기",
+    "phone": "010-8897-1207"
+  },
+  {
+    "id": "seed-csv-0113",
+    "company": "강남",
+    "carNumber": "경기78아7664",
+    "driverName": "차치훈",
+    "phone": "010-7122-2522"
+  },
+  {
+    "id": "seed-csv-0114",
+    "company": "강남",
+    "carNumber": "경기79사1902",
+    "driverName": "이상훈",
+    "phone": "010-9506-4502"
+  },
+  {
+    "id": "seed-csv-0115",
+    "company": "강남",
+    "carNumber": "경기72아7047",
+    "driverName": "이효창",
+    "phone": "010-9616-0624"
+  },
+  {
+    "id": "seed-csv-0116",
+    "company": "강남",
+    "carNumber": "경기72아6192",
+    "driverName": "홍종원",
+    "phone": "010-5461-6979"
+  },
+  {
+    "id": "seed-csv-0117",
+    "company": "강남",
+    "carNumber": "경기76자3575",
+    "driverName": "이종열",
+    "phone": "010-5959-9294"
+  },
+  {
+    "id": "seed-csv-0118",
+    "company": "강남",
+    "carNumber": "경기73아2460",
+    "driverName": "홍성준",
+    "phone": "010-5892-3496"
+  },
+  {
+    "id": "seed-csv-0119",
+    "company": "강남",
+    "carNumber": "경기73아2460",
+    "driverName": "이범준",
+    "phone": "010-3384-9958",
+    "note": "GPS미장착"
+  },
+  {
+    "id": "seed-csv-0120",
+    "company": "강남",
+    "carNumber": "경기79사1048",
+    "driverName": "최진우",
+    "phone": "010-3084-1712",
+    "note": "GPS미장착"
+  },
+  {
+    "id": "seed-csv-0121",
+    "company": "가고파",
+    "carNumber": "경기73사3155",
+    "driverName": "최동찬",
+    "phone": "010-8984-8505"
+  },
+  {
+    "id": "seed-csv-0122",
+    "company": "가고파",
+    "carNumber": "경기78자7377",
+    "driverName": "한경수",
+    "phone": "010-5717-9919"
+  },
+  {
+    "id": "seed-csv-0123",
+    "company": "가고파",
+    "carNumber": "경기76자7812",
+    "driverName": "신재역",
+    "phone": "010-4911-8897"
+  },
+  {
+    "id": "seed-csv-0124",
+    "company": "가고파",
+    "carNumber": "경기76아3385",
+    "driverName": "황규남",
+    "phone": "010-5269-5283"
+  },
+  {
+    "id": "seed-csv-0125",
+    "company": "가고파",
+    "carNumber": "경기78자5951",
+    "driverName": "박지우",
+    "phone": "010-5673-2432"
+  },
+  {
+    "id": "seed-csv-0126",
+    "company": "가고파",
+    "carNumber": "경기72아7011",
+    "driverName": "손원진",
+    "phone": "010-9980-4590"
+  },
+  {
+    "id": "seed-csv-0127",
+    "company": "가고파",
+    "carNumber": "경기79사2042",
+    "driverName": "노주영",
+    "phone": "010-9878-9242"
+  },
+  {
+    "id": "seed-csv-0128",
+    "company": "가고파",
+    "carNumber": "경기79사2734",
+    "driverName": "홍종진",
+    "phone": "010-2732-6859"
+  },
+  {
+    "id": "seed-csv-0129",
+    "company": "가고파",
+    "carNumber": "경기76아6004",
+    "driverName": "이정숙",
+    "phone": "010-8963-0968"
+  },
+  {
+    "id": "seed-csv-0130",
+    "company": "가고파",
+    "carNumber": "경기76사3814",
+    "driverName": "최상우",
+    "phone": "010-5402-2702"
+  },
+  {
+    "id": "seed-csv-0131",
+    "company": "가고파",
+    "carNumber": "경기76아4915",
+    "driverName": "박기범",
+    "phone": "010-2008-5369"
+  },
+  {
+    "id": "seed-csv-0132",
+    "company": "가고파",
+    "carNumber": "경기77바3021",
+    "driverName": "이원집",
+    "phone": "010-2420-2690"
+  },
+  {
+    "id": "seed-csv-0133",
+    "company": "가고파",
+    "carNumber": "경기73아3575",
+    "driverName": "노승래",
+    "phone": "010-8855-6222"
+  },
+  {
+    "id": "seed-csv-0134",
+    "company": "가고파",
+    "carNumber": "경기72아7036",
+    "driverName": "강기철",
+    "phone": "010-4446-5858",
+    "note": "GPS미장착"
+  },
+  {
+    "id": "seed-csv-0135",
+    "company": "가고파",
+    "carNumber": "경기79사2199",
+    "driverName": "김상혁",
+    "phone": "010-5506-5769",
+    "note": "GPS미장착"
+  }
+]

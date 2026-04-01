@@ -1,9 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
-import { getCurrentUserProfile, isAdmin } from '@/lib/firebase/auth';
+import { getCurrentUserProfile, isWebConsoleSuperAdmin } from '@/lib/firebase/auth';
 import type { User } from '@/lib/types';
 
 interface AuthContextType {
@@ -27,9 +27,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (firebaseUser) {
         try {
           const profile = await getCurrentUserProfile();
-          setUser(profile);
+          if (!profile || !isWebConsoleSuperAdmin(profile)) {
+            await signOut(auth);
+            setUser(null);
+          } else {
+            setUser(profile);
+          }
         } catch (error) {
           console.error('Error loading user profile:', error);
+          await signOut(auth);
           setUser(null);
         }
       } else {
@@ -46,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         loading,
-        isAdminUser: isAdmin(user),
+        isAdminUser: isWebConsoleSuperAdmin(user),
       }}
     >
       {children}

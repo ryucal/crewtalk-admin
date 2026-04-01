@@ -168,8 +168,7 @@ export default function RoomsPage() {
                 "유형",
                 "공개 소속",
                 "세부 노선",
-                "보고 방식",
-                "마지막 메시지",
+                "방유형",
                 "관리",
               ].map((h) => (
                 <th
@@ -206,9 +205,6 @@ export default function RoomsPage() {
                   >
                     {room.reportMode || "normal"}
                   </span>
-                </td>
-                <td className="px-3 py-2.5 text-xs border-b border-border text-text-tertiary">
-                  {room.time} · {room.lastMsg?.split(":")[0]}
                 </td>
                 <td className="px-3 py-2.5 text-xs border-b border-border">
                   <div className="flex gap-2">
@@ -280,7 +276,7 @@ export default function RoomsPage() {
               </div>
               <div>
                 <label className="text-[11px] font-medium text-text-secondary block mb-1">
-                  보고 방식
+                  방유형
                 </label>
                 <select
                   value={addForm.reportMode}
@@ -356,7 +352,7 @@ export default function RoomsPage() {
               </div>
               <div>
                 <label className="text-[11px] font-medium text-text-secondary block mb-1">
-                  보고 방식
+                  방유형
                 </label>
                 <select
                   value={editForm.reportMode}

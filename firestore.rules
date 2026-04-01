@@ -1,71 +1,186 @@
 rules_version = '2';
+
+// 배포: firebase deploy --only firestore:rules
+//
+// 웹(crewtalk-admin 등)과 공유.
+// - role: superAdmin(웹)·superadmin(앱) → isSuperRole() (문자열만 .lower() 비교, 비문자 role 로 평가 오류 방지)
+// - role: manager → config/rooms 메타 쓰기는 불가, users 타인 읽기·수정은 가능(앱 매니저)
+// - 가입 시 role 은 driver 만
+//
+// isElevatedAdmin = 슈퍼 역할 OR 소속명「관리자」OR users.isAdmin (웹 관리자-only 플래그 계정)
+//
+// FCM: 본인 users/{uid} 에서 isAdmin·company·phoneDigits·role 을 바꾸지 않는 한
+//      fcmTokens 필드만 arrayUnion/arrayRemove 해도 기존 update 조건으로 허용됨 (별도 match 불필요).
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // 채팅방 문서 자체: config/rooms에서 관리하므로 직접 접근 불필요 → 기본 deny
-    match /rooms/{roomId} {
-      allow read, write: if false;
+    function callerExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    function callerUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // 채팅 메시지: rooms/{roomId}/messages — 로그인한 사용자만 읽기/쓰기 (익명 포함)
-    match /rooms/{roomId}/messages/{messageId} {
-      allow read, write: if request.auth != null;
+    // role 이 문자열이 아니면 .lower() 호출 시 규칙 평가 오류 → permission-denied 가 날 수 있음
+    function isSuperRole() {
+      return callerExists() && (
+        callerUserData().get("role", "") == "superAdmin" ||
+        callerUserData().get("role", "") == "superadmin" ||
+        callerUserData().get("role", "") == "SuperAdmin" ||
+        callerUserData().get("role", "") == "SUPERADMIN" ||
+        (
+          callerUserData().get("role", "") is string &&
+          callerUserData().get("role", "").lower() == "superadmin"
+        )
+      );
+    }
+    function isManagerRole() {
+      return callerExists() && (
+        callerUserData().get("role", "") == "manager" ||
+        callerUserData().get("role", "") == "Manager" ||
+        (
+          callerUserData().get("role", "") is string &&
+          callerUserData().get("role", "").lower() == "manager"
+        )
+      );
+    }
+    // company 가 문자열이 아니면 is string 분기에서만 false — 정확 일치는 그대로 허용
+    function isCompanyAdminLabel() {
+      return callerExists() && (
+        callerUserData().get("company", "") == "관리자" ||
+        (
+          callerUserData().get("company", "") is string &&
+          callerUserData().get("company", "").trim() == "관리자"
+        )
+      );
+    }
+    function isAdminFlag() {
+      return callerExists() && (
+        callerUserData().get("isAdmin", false) == true ||
+        callerUserData().get("isAdmin", "") == "true"
+      );
+    }
+    function isElevatedAdmin() {
+      return isSuperRole() || isCompanyAdminLabel() || isAdminFlag();
+    }
+    function isStaffElevated() {
+      return isElevatedAdmin() || isManagerRole();
+    }
+
+    // 채팅방 메타: rooms/{roomId} 개별 문서. 읽기: 로그인 사용자. 쓰기: 슈퍼·「관리자」소속만.
+    // lastMessage 필드는 Cloud Function(admin SDK)이 갱신하므로 규칙 적용 안 됨.
+    match /rooms/{roomId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && isElevatedAdmin();
+
+      // 채팅 메시지: rooms/{roomId}/messages
+      match /messages/{messageId} {
+        allow read: if request.auth != null;
+
+        allow create: if request.auth != null
+          && (
+            request.resource.data.get('type', 'text') != 'emergency'
+            || isStaffElevated()
+          )
+          && (
+            request.resource.data.get('text', null) == null
+            || request.resource.data.get('text', '').size() <= 2000
+          );
+
+        allow update, delete: if request.auth != null && (
+          resource.data.get('userId', '') == request.auth.uid
+          || (
+            callerUserData().get('phoneDigits', '') != ''
+            && resource.data.get('userId', '') == ('phone_' + callerUserData().get('phoneDigits', ''))
+          )
+          || isStaffElevated()
+        );
+      }
+
+      // 읽음 상태: 본인만 읽기/쓰기
+      match /readState/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow write: if request.auth != null && request.auth.uid == uid;
+      }
     }
 
     // 드라이버: drivers
-    // - read: 로그인한 사용자 (로그인 검증·검색용)
-    // - create: 로그인한 사용자 (회원가입용 — 익명 인증 포함 허용)
-    // - update/delete: 관리자만 (role superAdmin 또는 company 관리자)
     match /drivers/{driverId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "") == "superAdmin" ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("company", "") == "관리자");
+      allow update, delete: if request.auth != null && isElevatedAdmin();
     }
 
     // 회원 프로필: users/{uid}
-    // - 일반 사용자: 자신의 문서만 읽기/쓰기
-    // - 관리자: 모든 사용자 문서 read/update 가능 (역할 관리용)
     match /users/{userId} {
       allow read: if request.auth != null && (
         request.auth.uid == userId ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "") == "superAdmin" ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("company", "") == "관리자"
+        isStaffElevated()
       );
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update, delete: if request.auth != null && (
+
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.isAdmin == false
+        && request.resource.data.role == 'driver';
+
+      allow update: if request.auth != null && (
+        (
+          request.auth.uid == userId
+          && request.resource.data.isAdmin == resource.data.isAdmin
+          && request.resource.data.company == resource.data.company
+          && request.resource.data.phoneDigits == resource.data.phoneDigits
+          && request.resource.data.get('role', 'driver') == resource.data.get('role', 'driver')
+        )
+        || isStaffElevated()
+      );
+
+      allow delete: if request.auth != null && (
         request.auth.uid == userId ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "") == "superAdmin" ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("company", "") == "관리자"
+        isStaffElevated()
       );
     }
 
-    // 앱 설정: config/{docId} — 소속 업체 목록(companies), 채팅방 목록(rooms) 등
-    // write: isAdmin와 동일한 조건 (role superAdmin 또는 company 관리자)
+    // 앱 설정: config/{docId} — 쓰기는 슈퍼·「관리자」소속만 (매니저 제외)
+    // 예: companies, workspace_calendar, vehicle_registry(웹 차량 관리)
+    // 단, 카카오맵 내비 링크 문서는 슈퍼 역할만 쓰기 (기사·매니저·관리자소속 수정 불가)
     match /config/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "") == "superAdmin" ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("company", "") == "관리자");
+      allow write: if request.auth != null && (
+        (docId == 'kakao_nav_links' && isSuperRole()) ||
+        (docId != 'kakao_nav_links' && isElevatedAdmin())
+      );
     }
 
-    // GPS 운행 기록: tracks/{trackId}
-    // - create/update: 로그인한 사용자 (기사가 GPS 위치 데이터 전송)
-    // - read/delete: 관리자만 (role superAdmin 또는 company 관리자)
+    // GPS 운행 기록: tracks/{trackId} + points 서브컬렉션
     match /tracks/{trackId} {
-      allow create, update: if request.auth != null;
-      allow read, delete: if request.auth != null &&
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "") == "superAdmin" ||
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("company", "") == "관리자");
+      allow read: if request.auth != null && (
+        isElevatedAdmin()
+        || resource.data.ownerUid == request.auth.uid
+      );
+      allow delete: if request.auth != null && isElevatedAdmin();
 
-      // points 서브컬렉션 (crewtalk-admin 관제 시스템에서 조회 시 필요)
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid;
+
+      allow update: if request.auth != null && (
+        resource.data.ownerUid == request.auth.uid
+        || isElevatedAdmin()
+      );
+
       match /points/{pointId} {
-        allow read, delete: if request.auth != null &&
-          (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("role", "") == "superAdmin" ||
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get("company", "") == "관리자");
-        allow create, update: if request.auth != null;
+        allow read, delete: if request.auth != null && isElevatedAdmin();
+        allow create, update: if request.auth != null
+          && get(/databases/$(database)/documents/tracks/$(trackId)).data.ownerUid == request.auth.uid;
       }
+    }
+
+    match /company_profiles/{id} {
+      allow read: if true;
+      allow write: if false;
+    }
+    match /company_private/{id} {
+      allow read, write: if false;
     }
   }
 }

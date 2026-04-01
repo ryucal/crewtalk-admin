@@ -1,28 +1,42 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
-import { getCompanies, getDrivers, updateCompanies, updateDriversCompany } from "@/lib/firebase/firestore";
-import type { Company, Driver } from "@/lib/types";
+import { Plus, Eye, EyeOff, Edit2, Trash2, X } from "lucide-react";
+import {
+  getCompanies,
+  getUsersDirectory,
+  updateCompanies,
+  updateDriversCompany,
+  updateUsersCompany,
+} from "@/lib/firebase/firestore";
+import type { Company, UserDirectoryRow } from "@/lib/types";
+
+function roleLabel(role: UserDirectoryRow["role"]): string {
+  if (role === "superAdmin") return "슈퍼관리자";
+  if (role === "manager") return "관리자";
+  return "기사";
+}
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [members, setMembers] = useState<UserDirectoryRow[]>([]);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState<Company>({ name: "", password: "", mode: "normal" });
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [editForm, setEditForm] = useState<Company>({ name: "", password: "", mode: "normal" });
+  /** 상단 카드 클릭 시 기사 목록 모달 */
+  const [driverListCompany, setDriverListCompany] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [companiesData, driversData] = await Promise.all([
+        const [companiesData, usersData] = await Promise.all([
           getCompanies(),
-          getDrivers(),
+          getUsersDirectory(),
         ]);
         setCompanies(companiesData);
-        setDrivers(driversData);
+        setMembers(usersData);
       } catch (error) {
         console.error("Error loading companies:", error);
       }
@@ -32,10 +46,17 @@ export default function CompaniesPage() {
 
   const companyStats = companies.map((c) => ({
     ...c,
-    driverCount: drivers.filter((d) => d.company === c.name).length,
+    memberCount: members.filter((u) => u.company === c.name).length,
   }));
 
-  const maxCount = Math.max(...companyStats.map((c) => c.driverCount));
+  const maxCount = Math.max(1, ...companyStats.map((c) => c.memberCount));
+
+  const usersInModal = driverListCompany
+    ? members
+        .filter((u) => u.company === driverListCompany)
+        .slice()
+        .sort((a, b) => (a.name || "").localeCompare(b.name || "", "ko"))
+    : [];
 
   const togglePassword = (name: string) => {
     setShowPasswords((p) => ({ ...p, [name]: !p[name] }));
@@ -67,9 +88,11 @@ export default function CompaniesPage() {
           : c
       );
       if (nameChanged) {
-        await updateDriversCompany(editingCompany.name, trimmedName);
-        const freshDrivers = await getDrivers();
-        setDrivers(freshDrivers);
+        await Promise.all([
+          updateDriversCompany(editingCompany.name, trimmedName),
+          updateUsersCompany(editingCompany.name, trimmedName),
+        ]);
+        setMembers(await getUsersDirectory());
       }
       await updateCompanies(updated);
       setCompanies(updated);
@@ -118,9 +141,9 @@ export default function CompaniesPage() {
   };
 
   const handleDeleteCompany = async (companyName: string) => {
-    const driverCount = drivers.filter((d) => d.company === companyName).length;
-    if (driverCount > 0) {
-      if (!confirm(`"${companyName}"에 등록된 기사가 ${driverCount}명 있습니다. 삭제하면 해당 기사들의 소속 정보가 초기화될 수 있습니다. 계속하시겠습니까?`)) {
+    const memberCount = members.filter((u) => u.company === companyName).length;
+    if (memberCount > 0) {
+      if (!confirm(`"${companyName}"에 등록된 회원(users)이 ${memberCount}명 있습니다. config 소속만 삭제되며, 회원 문서의 company 값은 그대로입니다. 계속하시겠습니까?`)) {
         return;
       }
     } else {
@@ -144,10 +167,11 @@ export default function CompaniesPage() {
       <div className="flex items-start justify-between mb-5">
         <div>
           <h1 className="text-xl font-semibold text-text-primary tracking-tight">
-            소속·권한 관리
+            소속 권한 관리
           </h1>
           <p className="text-xs text-text-tertiary mt-1">
-            소속 추가·삭제, 비밀번호 설정
+            소속 추가·삭제, 비밀번호 설정 · 인원 수는 Firestore <code className="text-[10px]">users</code>의{" "}
+            <code className="text-[10px]">company</code> 기준입니다.
           </p>
         </div>
         <button
@@ -170,9 +194,11 @@ export default function CompaniesPage() {
           ];
           const idx = companyStats.indexOf(c);
           return (
-            <div
+            <button
               key={c.name}
-              className="bg-surface border border-border rounded-[10px] p-4 shadow-sm hover:shadow-md transition-shadow"
+              type="button"
+              onClick={() => setDriverListCompany(c.name)}
+              className="bg-surface border border-border rounded-[10px] p-4 shadow-sm hover:shadow-md transition-shadow text-left w-full cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             >
               <div className="flex items-center justify-between mb-2.5">
                 <span className="text-[11px] font-medium text-text-tertiary uppercase tracking-wide">
@@ -184,34 +210,114 @@ export default function CompaniesPage() {
                 />
               </div>
               <div className="text-[22px] font-semibold leading-none tracking-tight mb-1.5">
-                {c.driverCount}
+                {c.memberCount}
               </div>
               <div className="text-[11px] text-text-tertiary flex items-center gap-1">
-                등록 기사
+                등록 회원
                 <span className="text-[10px] px-1.5 py-px rounded-full font-medium bg-gray-100 text-text-secondary">
-                  {c.mode === "summary" ? "통합" : "일반"}
+                  {c.mode === "summary" ? "솔라티" : "일반"}
                 </span>
               </div>
               <div className="mt-3 h-[5px] bg-bg rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full animate-bar-grow"
                   style={{
-                    width: `${(c.driverCount / maxCount) * 100}%`,
+                    width: `${(c.memberCount / maxCount) * 100}%`,
                     background: colors[idx % colors.length],
                   }}
                 />
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
+
+      {/* 기사 목록 모달 (카드 클릭) */}
+      {driverListCompany !== null && (
+        <div
+          className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 p-4"
+          onClick={() => setDriverListCompany(null)}
+          role="presentation"
+        >
+          <div
+            className="bg-surface rounded-xl w-full max-w-md max-h-[min(80vh,520px)] shadow-lg animate-fade-in flex flex-col border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-border shrink-0">
+              <div>
+                <h2 className="text-base font-semibold text-text-primary">등록 회원</h2>
+                <p className="text-[11px] text-text-tertiary mt-0.5">
+                  {driverListCompany} · {usersInModal.length}명 · Firestore users
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDriverListCompany(null)}
+                className="w-8 h-8 flex items-center justify-center rounded-md hover:bg-bg text-text-tertiary hover:text-text-primary cursor-pointer shrink-0"
+                aria-label="닫기"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-5 py-3 min-h-0">
+              {usersInModal.length === 0 ? (
+                <p className="text-xs text-text-tertiary py-6 text-center">
+                  이 소속으로 <code className="text-[10px]">users</code>에 등록된 회원이 없습니다.
+                </p>
+              ) : (
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-2 pr-2 text-[10px] font-semibold text-text-tertiary uppercase border-b border-border bg-bg sticky top-0">
+                        이름
+                      </th>
+                      <th className="text-left py-2 pr-2 text-[10px] font-semibold text-text-tertiary uppercase border-b border-border bg-bg sticky top-0">
+                        전화
+                      </th>
+                      <th className="text-left py-2 pr-2 text-[10px] font-semibold text-text-tertiary uppercase border-b border-border bg-bg sticky top-0">
+                        권한
+                      </th>
+                      <th className="text-left py-2 text-[10px] font-semibold text-text-tertiary uppercase border-b border-border bg-bg sticky top-0">
+                        차량
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usersInModal.map((u) => (
+                      <tr key={u.uid} className="hover:bg-bg/80 border-b border-border last:border-b-0">
+                        <td className="py-2.5 pr-2 font-medium text-text-primary">{u.name || "—"}</td>
+                        <td className="py-2.5 pr-2 text-text-secondary tabular-nums whitespace-nowrap">
+                          {u.phone || "—"}
+                        </td>
+                        <td className="py-2.5 pr-2 text-text-secondary">{roleLabel(u.role)}</td>
+                        <td className="py-2.5 text-text-tertiary truncate max-w-[120px]" title={u.car}>
+                          {u.car || "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-border shrink-0">
+              <button
+                type="button"
+                onClick={() => setDriverListCompany(null)}
+                className="w-full px-3.5 py-2 rounded-md text-xs font-medium border border-border-md bg-surface text-text-secondary hover:bg-bg cursor-pointer"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="bg-surface border border-border rounded-[10px] p-4 shadow-sm">
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              {["소속명", "기사 수", "비밀번호", "모드", "관리"].map((h) => (
+              {["소속명", "회원 수", "비밀번호", "모드", "관리"].map((h) => (
                 <th
                   key={h}
                   className="text-left px-3 py-2.5 text-[11px] font-semibold text-text-tertiary uppercase tracking-wide border-b border-border bg-bg"
@@ -228,7 +334,7 @@ export default function CompaniesPage() {
                   <strong>{c.name}</strong>
                 </td>
                 <td className="px-3 py-2.5 text-xs border-b border-border">
-                  {c.driverCount}명
+                  {c.memberCount}명
                 </td>
                 <td className="px-3 py-2.5 text-xs border-b border-border">
                   <div className="flex items-center gap-2">
@@ -255,7 +361,7 @@ export default function CompaniesPage() {
                         : "bg-accent-light text-accent"
                     }`}
                   >
-                    {c.mode || "normal"}
+                    {c.mode === "summary" ? "솔라티" : "일반"}
                   </span>
                 </td>
                 <td className="px-3 py-2.5 text-xs border-b border-border">
@@ -324,7 +430,7 @@ export default function CompaniesPage() {
                   className="w-full px-3 py-2 border border-border-md rounded-md text-sm outline-none focus:border-accent bg-surface"
                 >
                   <option value="normal">일반 (normal)</option>
-                  <option value="summary">출퇴근 통합 (summary)</option>
+                  <option value="summary">솔라티 (summary)</option>
                 </select>
               </div>
             </div>
@@ -388,7 +494,7 @@ export default function CompaniesPage() {
                   className="w-full px-3 py-2 border border-border-md rounded-md text-sm outline-none focus:border-accent bg-surface"
                 >
                   <option value="normal">일반 (normal)</option>
-                  <option value="summary">출퇴근 통합 (summary)</option>
+                  <option value="summary">솔라티 (summary)</option>
                 </select>
               </div>
             </div>

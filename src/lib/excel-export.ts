@@ -26,26 +26,22 @@ function formatDate(ts: number): string {
 }
 
 function getTrackDateTime(track: Track): { date: string; time: string } {
-  const fallback = new Date().getTime();
   if (track.date) {
-    const timeFromStart =
-      track.startTime instanceof Date
-        ? track.startTime.getTime()
-        : typeof track.startTime === "string"
-          ? track.startTime.includes("T")
-            ? new Date(track.startTime).getTime()
-            : fallback
-          : fallback;
-    const d = new Date(timeFromStart);
-    const date = track.date;
-    const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    return { date, time };
+    let time = "";
+    if (track.startTime instanceof Date) {
+      time = `${String(track.startTime.getHours()).padStart(2, "0")}:${String(track.startTime.getMinutes()).padStart(2, "0")}`;
+    } else if (typeof track.startTime === "string") {
+      if (track.startTime.includes("T")) {
+        const d = new Date(track.startTime);
+        time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+      } else {
+        const m = track.startTime.match(/^(\d{1,2}):(\d{2})/);
+        time = m ? `${String(Number(m[1])).padStart(2, "0")}:${m[2]}` : track.startTime;
+      }
+    }
+    return { date: track.date, time };
   }
-  const d = new Date(fallback);
-  return {
-    date: formatDate(d.getTime()),
-    time: `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`,
-  };
+  return { date: "", time: "" };
 }
 
 export async function exportTracksToExcel(

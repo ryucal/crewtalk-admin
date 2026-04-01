@@ -4,8 +4,11 @@ import { useState, useEffect } from "react";
 import { getCompanies, getRooms, getMessages, sendMessage } from "@/lib/firebase/firestore";
 import { formatDate } from "@/lib/mock-data";
 import type { Company, Room, ChatMessage } from "@/lib/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function NoticePage() {
+  const { user } = useAuth();
+  const senderName = (user?.name ?? "").trim() || "관리자";
   const [companies, setCompanies] = useState<Company[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [notices, setNotices] = useState<ChatMessage[]>([]);
@@ -52,6 +55,12 @@ export default function NoticePage() {
 
   const normalRooms = rooms.filter((r) => r.id < 998);
 
+  /** 발송 대상 모드(일반/솔라티)와 방의 reportMode 일치 여부 */
+  function roomMatchesTargetMode(room: Room, mode: "normal" | "summary"): boolean {
+    const rm = room.reportMode ?? "normal";
+    return mode === "summary" ? rm === "summary" : rm !== "summary";
+  }
+
   const filteredCompanies = companies.filter((c) => {
     const mode = c.mode ?? "normal";
     return mode === targetMode;
@@ -91,13 +100,27 @@ export default function NoticePage() {
       return;
     }
 
-    const roomsToSend = normalRooms.filter(
-      (r) =>
-        r.companies &&
-        r.companies.some((c) => selectedCompanies.includes(c))
-    );
+    const allCompaniesInModeSelected =
+      filteredCompanies.length > 0 &&
+      selectedCompanies.length === filteredCompanies.length &&
+      filteredCompanies.every((c) => selectedCompanies.includes(c.name));
+
+    const roomsToSend = allCompaniesInModeSelected
+      ? normalRooms.filter((r) => roomMatchesTargetMode(r, targetMode))
+      : normalRooms.filter(
+          (r) =>
+            roomMatchesTargetMode(r, targetMode) &&
+            r.companies &&
+            r.companies.length > 0 &&
+            r.companies.some((c) => selectedCompanies.includes(c))
+        );
+
     if (roomsToSend.length === 0) {
-      alert("선택한 소속에 연결된 채팅방이 없습니다.");
+      alert(
+        allCompaniesInModeSelected
+          ? "해당 모드에 해당하는 채팅방이 없습니다."
+          : "선택한 소속에 연결된 채팅방이 없습니다."
+      );
       return;
     }
 
@@ -111,7 +134,7 @@ export default function NoticePage() {
           sendMessage(room.id.toString(), {
             type: "notice",
             text: trimmedContent,
-            name: "관리자",
+            name: senderName,
             date,
             time,
           })
@@ -121,10 +144,10 @@ export default function NoticePage() {
       setContent("");
       const newNotice: ChatMessage = {
         id: `new-${Date.now()}`,
-        userId: "admin",
+        userId: user?.uid ?? "admin",
         type: "notice",
         text: trimmedContent,
-        name: "관리자",
+        name: senderName,
         date,
         time,
         isMe: false,
@@ -184,7 +207,7 @@ export default function NoticePage() {
                     : "bg-surface text-text-secondary border-border-md hover:bg-bg"
                 }`}
               >
-                출퇴근 통합 (summary)
+                솔라티 (summary)
               </button>
             </div>
           </div>

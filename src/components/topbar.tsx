@@ -5,12 +5,16 @@ import { Download, Plus, Bell } from "lucide-react";
 
 const pageNames: Record<NavPage, string> = {
   dashboard: "대시보드",
+  routeOperation: "노선별 운행 현황",
   reports: "인원보고 조회",
+  peakAnalysis: "피크 시간 분석",
   emergency: "긴급호출 이력",
   rooms: "채팅방 관리",
   monitoring: "관제 시스템",
-  drivers: "기사·차량",
-  companies: "소속·권한",
+  dispatch: "배차표 관리",
+  drivers: "앱 기사 관리",
+  vehicleManagement: "차량 관리",
+  companies: "소속 권한",
   notice: "공지 발송",
   chat: "채팅 모니터링",
 };

@@ -12,17 +12,25 @@ import EmergencyPage from "@/components/pages/emergency-page";
 import RoomsPage from "@/components/pages/rooms-page";
 import MonitoringPage from "@/components/pages/monitoring-page";
 import DriversPage from "@/components/pages/drivers-page";
+import VehicleManagementPage from "@/components/pages/vehicle-management-page";
 import CompaniesPage from "@/components/pages/companies-page";
 import NoticePage from "@/components/pages/notice-page";
 import ChatPage from "@/components/pages/chat-page";
+import DispatchPage from "@/components/pages/dispatch-page";
+import PeakAnalysisPage from "@/components/pages/peak-analysis-page";
+import RouteOperationStatusPage from "@/components/pages/route-operation-status-page";
 
 const pageComponents: Record<NavPage, React.ComponentType> = {
   dashboard: DashboardPage,
+  routeOperation: RouteOperationStatusPage,
   reports: ReportsPage,
+  peakAnalysis: PeakAnalysisPage,
   emergency: EmergencyPage,
   rooms: RoomsPage,
   monitoring: MonitoringPage,
+  dispatch: DispatchPage,
   drivers: DriversPage,
+  vehicleManagement: VehicleManagementPage,
   companies: CompaniesPage,
   notice: NoticePage,
   chat: ChatPage,

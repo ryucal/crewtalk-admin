@@ -8,11 +8,15 @@ import {
   AlertTriangle,
   Home,
   Radio,
+  Bus,
   Users,
   Briefcase,
   Bell,
   MessageSquare,
   LogOut,
+  BarChart3,
+  Waypoints,
+  Car,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { logout } from "@/lib/firebase/auth";
@@ -28,7 +32,11 @@ const navSections = [
     label: "운행",
     items: [
       { id: "dashboard" as NavPage, label: "대시보드", icon: LayoutDashboard },
-      { id: "reports" as NavPage, label: "인원보고 조회", icon: FileText },
+      { id: "routeOperation" as NavPage, label: "노선별 운행 현황", icon: Waypoints },
+      { id: "chat" as NavPage, label: "채팅 모니터링", icon: MessageSquare },
+      { id: "dispatch" as NavPage, label: "배차표 관리", icon: Bus },
+      { id: "monitoring" as NavPage, label: "관제 시스템", icon: Radio },
+      { id: "notice" as NavPage, label: "공지 발송", icon: Bell },
       { id: "emergency" as NavPage, label: "긴급호출 이력", icon: AlertTriangle },
     ],
   },
@@ -36,11 +44,11 @@ const navSections = [
     label: "관리",
     items: [
       { id: "rooms" as NavPage, label: "채팅방 관리", icon: Home },
-      { id: "monitoring" as NavPage, label: "관제 시스템", icon: Radio },
-      { id: "drivers" as NavPage, label: "기사·차량", icon: Users },
-      { id: "companies" as NavPage, label: "소속·권한", icon: Briefcase },
-      { id: "notice" as NavPage, label: "공지 발송", icon: Bell },
-      { id: "chat" as NavPage, label: "채팅 모니터링", icon: MessageSquare },
+      { id: "reports" as NavPage, label: "인원보고 조회", icon: FileText },
+      { id: "peakAnalysis" as NavPage, label: "피크 시간 분석", icon: BarChart3 },
+      { id: "drivers" as NavPage, label: "앱 기사 관리", icon: Users },
+      { id: "vehicleManagement" as NavPage, label: "차량 관리", icon: Car },
+      { id: "companies" as NavPage, label: "소속 권한", icon: Briefcase },
     ],
   },
 ];

@@ -6,6 +6,7 @@ import { getRooms, getDrivers, getCompanies, getAllReportsByDate, getAllEmergenc
 import { getMessages } from "@/lib/firebase/firestore";
 import { formatDate } from "@/lib/mock-data";
 import WorkspaceCalendarPanel from "@/components/workspace-calendar-panel";
+import { formatPeakTimeSlotRange24h } from "@/lib/peak-analysis";
 import type { Room, Driver, Company, ReportMessage, EmergencyMessage, ChatMessage } from "@/lib/types";
 
 function StatCard({
@@ -160,8 +161,8 @@ export default function DashboardPage() {
 
         const normalRooms = roomsData.filter((r) => r.id < 998);
 
-        // 최근 7일 인원보고 (기사·차량관리와 동일한 차량번호 노출용)
-        const datePromises = Array.from({ length: 7 }, (_, i) => {
+        // 최근 14일 인원보고 (대시보드 + 피크 히트맵 5영업일 평균용)
+        const datePromises = Array.from({ length: 14 }, (_, i) => {
           const d = new Date();
           d.setDate(d.getDate() - i);
           const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -201,11 +202,14 @@ export default function DashboardPage() {
   const totalEvening = eveningReports.reduce((s, r) => s + (r.reportData?.count || 0), 0);
   const totalAllReports = todayReports.reduce((s, r) => s + (r.reportData?.count || 0), 0);
 
-  const peakTime = todayReports.length > 0
-    ? todayReports.reduce((max, r) => {
-        return (r.reportData?.count || 0) > (max.reportData?.count || 0) ? r : max;
-      }).time
-    : "—";
+  const peakTime =
+    todayReports.length > 0
+      ? formatPeakTimeSlotRange24h(
+          todayReports.reduce((max, r) => {
+            return (r.reportData?.count || 0) > (max.reportData?.count || 0) ? r : max;
+          }).time
+        )
+      : "—";
 
   const normalRooms = rooms.filter((r) => r.id < 998);
   const routeData = normalRooms.map((room) => {
@@ -263,7 +267,7 @@ export default function DashboardPage() {
           label="피크 시간"
           value={peakTime}
           valueColor="var(--color-warning)"
-          sub="가장 많은 탑승 보고 시간"
+          sub="최다 탑승 보고가 난 30분 구간 · 상세는 관리 → 피크 시간 분석"
           icon={<Clock size={14} color="#d97706" />}
           iconBg="var(--color-warning-light)"
         />

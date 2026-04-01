@@ -1,0 +1,19 @@
+rules_version = '2';
+
+// 배포: firebase deploy --only storage
+//
+// 앱 업로드 경로: rooms/{roomId}/images/{fileId}.jpg  (ChatFirestoreRepository.uploadChatImage)
+// 관리자 웹 채팅 업로드: 동일 경로 (src/lib/firebase/storage-chat.ts)
+// Firestore `rooms/{roomId}/messages` 와 동일하게 로그인 사용자만 읽기·쓰기.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /rooms/{roomId}/images/{imageId} {
+      allow read: if request.auth != null;
+      // contentType 은 클라이언트에 따라 비어 있을 수 있어 image/* 는 강제하지 않음
+      allow create, update: if request.auth != null
+        && request.resource.size < 15 * 1024 * 1024;
+      allow delete: if request.auth != null;
+    }
+  }
+}

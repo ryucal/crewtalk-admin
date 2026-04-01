@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { loginWithEmail } from "@/lib/firebase/auth";
-import { getCurrentUserProfile, isAdmin } from "@/lib/firebase/auth";
+import {
+  loginWithPhoneAndPassword,
+  getCurrentUserProfile,
+  isWebConsoleSuperAdmin,
+} from "@/lib/firebase/auth";
+import { digitsOnly, formatKrMobileInput, isValidKoreanMobileDigits } from "@/lib/phone-auth";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -13,27 +17,42 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email || !password) {
-      setError("이메일과 비밀번호를 입력해 주세요.");
+    const digits = digitsOnly(phone);
+    if (!digits) {
+      setError("전화번호를 입력해 주세요.");
+      return;
+    }
+    if (!isValidKoreanMobileDigits(digits)) {
+      setError("전화번호를 올바르게 입력해 주세요.");
+      return;
+    }
+    if (!password) {
+      setError("개인 비밀번호를 입력해 주세요.");
       return;
     }
 
     setLoading(true);
     try {
-      await loginWithEmail(email, password);
+      await loginWithPhoneAndPassword(phone, password);
       const profile = await getCurrentUserProfile();
-      if (!profile || !isAdmin(profile)) {
-        setError("관리자 권한이 없습니다. superAdmin 권한이 필요합니다.");
+      if (!profile || !isWebConsoleSuperAdmin(profile)) {
+        setError(
+          "웹 콘솔은 role 이 superAdmin 인 계정만 이용할 수 있습니다.",
+        );
         const { signOut } = await import("firebase/auth");
         const { auth } = await import("@/lib/firebase/config");
         await signOut(auth);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "로그인에 실패했습니다.";
-      if (message.includes("auth/invalid-credential") || message.includes("auth/wrong-password")) {
-        setError("이메일 또는 비밀번호가 올바르지 않습니다.");
+      if (message === "auth/invalid-phone") {
+        setError("전화번호를 올바르게 입력해 주세요.");
+      } else if (message.includes("auth/invalid-credential") || message.includes("auth/wrong-password")) {
+        setError("전화번호 또는 개인 비밀번호가 올바르지 않습니다.");
       } else if (message.includes("auth/user-not-found")) {
         setError("등록되지 않은 계정입니다.");
+      } else if (message.includes("auth/invalid-email")) {
+        setError("전화번호를 올바르게 입력해 주세요.");
       } else {
         setError(message);
       }
@@ -63,31 +82,34 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
               <label className="text-[11px] font-medium text-text-secondary block mb-1.5">
-                이메일
+                전화번호
               </label>
               <input
-                type="email"
-                value={email}
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+                value={phone}
                 onChange={(e) => {
-                  setEmail(e.target.value);
+                  setPhone(formatKrMobileInput(e.target.value));
                   setError("");
                 }}
-                placeholder="admin@crewtalk.co.kr"
+                placeholder="010-0000-0000"
                 className="w-full px-3 py-2.5 border border-border-md rounded-md text-sm outline-none focus:border-accent bg-surface font-sans transition-colors"
               />
             </div>
             <div className="mb-4">
               <label className="text-[11px] font-medium text-text-secondary block mb-1.5">
-                비밀번호
+                개인 비밀번호
               </label>
               <input
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   setError("");
                 }}
-                placeholder="••••••••"
+                placeholder="앱 가입 시 설정한 비밀번호"
                 className="w-full px-3 py-2.5 border border-border-md rounded-md text-sm outline-none focus:border-accent bg-surface font-sans transition-colors"
               />
             </div>
@@ -109,9 +131,8 @@ export default function LoginPage() {
 
           <div className="mt-4 pt-4 border-t border-border">
             <p className="text-[11px] text-text-tertiary text-center">
-              superAdmin 권한이 필요합니다.
-              <br />
-              접근 권한이 없다면 관리자에게 문의하세요.
+              앱과 동일한 계정입니다. Firebase Auth 는{" "}
+              <span className="whitespace-nowrap">010…@crew.co.kr</span> 형식으로 매핑됩니다.               웹은 role 이 superAdmin(대소문자 무관)인 계정만 접근할 수 있습니다.
             </p>
           </div>
         </div>

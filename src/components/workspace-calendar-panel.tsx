@@ -119,8 +119,27 @@ function appendSeenIdToStorage(id: string) {
   }
 }
 
+function calendarItemAuthorLine(it: WorkspaceCalendarItem): string | null {
+  const created = (it.createdByName ?? "").trim();
+  const edited = (it.lastEditedByName ?? "").trim();
+  if (!created && !edited) return null;
+  if (edited && edited !== created) {
+    return created ? `${created} · ${edited}` : edited;
+  }
+  return created || edited;
+}
+
+function scheduleBarTitle(it: WorkspaceCalendarItem): string {
+  const range =
+    it.date + (it.endDate && it.endDate !== it.date ? ` ~ ${it.endDate}` : "");
+  const base = `${it.title} (${range})`;
+  const author = (it.createdByName ?? "").trim();
+  return author ? `${base} · ${author}` : base;
+}
+
 export default function WorkspaceCalendarPanel() {
-  const { isAdminUser } = useAuth();
+  const { isAdminUser, user } = useAuth();
+  const actorName = (user?.name ?? "").trim() || "관리자";
   const [items, setItems] = useState<WorkspaceCalendarItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -283,6 +302,7 @@ export default function WorkspaceCalendarPanel() {
         date: selectedDate,
         ...(newStartTime.trim() ? { startTime: newStartTime.trim() } : {}),
         done: false,
+        createdByName: actorName,
       };
     } else {
       row = {
@@ -292,6 +312,7 @@ export default function WorkspaceCalendarPanel() {
         date: rangeStart,
         ...(rangeEnd !== rangeStart ? { endDate: rangeEnd } : {}),
         ...(newStartTime.trim() ? { startTime: newStartTime.trim() } : {}),
+        createdByName: actorName,
       };
     }
 
@@ -305,7 +326,9 @@ export default function WorkspaceCalendarPanel() {
     markCalendarItemSeen(id);
     if (!isAdminUser) return;
     const next = items.map((it) =>
-      it.id === id && it.kind === "todo" ? { ...it, done: !it.done } : it
+      it.id === id && it.kind === "todo"
+        ? { ...it, done: !it.done, lastEditedByName: actorName }
+        : it
     );
     await persist(next);
   };
@@ -445,7 +468,7 @@ export default function WorkspaceCalendarPanel() {
                             height: barRowHeight,
                             alignSelf: "start",
                           }}
-                          title={`${seg.item.title} (${seg.item.date}${seg.item.endDate && seg.item.endDate !== seg.item.date ? ` ~ ${seg.item.endDate}` : ""})`}
+                          title={scheduleBarTitle(seg.item)}
                         />
                       ))}
                     </div>
@@ -486,6 +509,7 @@ export default function WorkspaceCalendarPanel() {
             ) : (
               selectedItems.map((it) => {
                 const showNew = !seenIds.has(it.id);
+                const authorLine = calendarItemAuthorLine(it);
                 return (
                 <div
                   key={it.id}
@@ -535,8 +559,15 @@ export default function WorkspaceCalendarPanel() {
                         {it.endTime ? ` – ${it.endTime}` : ""}
                       </div>
                     )}
-                    <div className="text-[9px] text-text-tertiary mt-0.5">
-                      {it.kind === "schedule" ? "일정" : "할 일"}
+                    <div className="flex items-baseline justify-between gap-2 mt-0.5 min-w-0">
+                      <span className="text-[9px] text-text-tertiary shrink-0">
+                        {it.kind === "schedule" ? "일정" : "할 일"}
+                      </span>
+                      {authorLine ? (
+                        <span className="text-[9px] text-text-secondary/90 font-medium truncate text-right">
+                          {authorLine}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                   {isAdminUser && (

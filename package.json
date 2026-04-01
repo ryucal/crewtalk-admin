@@ -6,7 +6,8 @@
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed:vehicles": "node scripts/generate-vehicle-seed.mjs"
   },
   "dependencies": {
     "@turf/turf": "^7.3.4",

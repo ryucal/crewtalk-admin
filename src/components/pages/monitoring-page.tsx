@@ -66,6 +66,8 @@ export default function MonitoringPage() {
   const [loading, setLoading] = useState(true);
   const [pointsLoading, setPointsLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => getTodayDateString());
+  /** 운행 경로 목록: 기본 인원보고 0명만, 전체 시 모든 트랙 */
+  const [trackListScope, setTrackListScope] = useState<"zeroOnly" | "all">("zeroOnly");
   /** GPS 구간 (datetime-local, 빈 값이면 해당 쪽 제한 없음) */
   const [gpsRangeStart, setGpsRangeStart] = useState("");
   const [gpsRangeEnd, setGpsRangeEnd] = useState("");
@@ -74,26 +76,31 @@ export default function MonitoringPage() {
   const gpsRangeInitForTrackIdRef = useRef<string | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadTracks() {
       setLoading(true);
       try {
         const data = await getTracks({
-          reportCountZeroOnly: true,
+          reportCountZeroOnly: trackListScope === "zeroOnly",
           date: selectedDate || undefined,
         });
+        if (cancelled) return;
         setTracks(data);
         setSelectedTrackId(null);
         if (data.length > 0) {
           setSelectedTrackId(data[0].id);
         }
       } catch (error) {
-        console.error("Error loading tracks:", error);
+        if (!cancelled) console.error("Error loading tracks:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadTracks();
-  }, [selectedDate]);
+    void loadTracks();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDate, trackListScope]);
 
   useEffect(() => {
     if (!selectedTrackId) {
@@ -185,7 +192,9 @@ export default function MonitoringPage() {
             관제 시스템
           </h1>
           <p className="text-xs text-text-tertiary mt-1">
-            보고인원 0명인 운행 경로만 표시됩니다. 선택해 차량 이동 경로를 확인하세요.
+            선택한 날짜의 운행 트랙을 표시합니다. 기본은 인원보고{" "}
+            <span className="font-medium text-text-secondary">0명</span>인 항목만이며, 「전체」로 모든 트랙을 볼 수 있습니다. GPS는 각 트랙의{" "}
+            <code className="px-0.5 bg-bg rounded text-text-secondary">points</code> 서브컬렉션에서 불러옵니다.
           </p>
         </div>
       </div>
@@ -193,24 +202,51 @@ export default function MonitoringPage() {
       <div className="grid grid-cols-[440px_1fr] gap-3.5 h-[calc(100vh-260px)] min-h-[400px]">
         {/* 운행 경로 선택 - 왼쪽 목록 */}
         <div className="bg-surface border border-border rounded-[10px] p-4 shadow-sm flex flex-col min-h-0">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <div className="flex items-center gap-2 min-w-0">
-              <Route size={14} className="text-accent shrink-0" />
-              <span className="text-xs font-medium text-text-tertiary uppercase tracking-wide">
-                운행 경로 선택
-              </span>
-              <span className="text-xs text-text-secondary">
-                (총 {tracks.length}건)
-              </span>
+          <div className="flex flex-col gap-2 mb-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <Route size={14} className="text-accent shrink-0" />
+                <span className="text-xs font-medium text-text-tertiary uppercase tracking-wide">
+                  운행 경로 선택
+                </span>
+                <span className="text-xs text-text-secondary">
+                  (총 {tracks.length}건)
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Calendar size={12} className="text-text-tertiary" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="px-2 py-1 text-[11px] border border-border rounded-md bg-bg text-text-primary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
+                />
+              </div>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Calendar size={12} className="text-text-tertiary" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="px-2 py-1 text-[11px] border border-border rounded-md bg-bg text-text-primary focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
-              />
+            <div className="flex items-center gap-1" role="group" aria-label="목록 범위">
+              <span className="text-[10px] text-text-tertiary mr-0.5 shrink-0">인원보고</span>
+              <button
+                type="button"
+                onClick={() => setTrackListScope("zeroOnly")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                  trackListScope === "zeroOnly"
+                    ? "bg-accent-light border-accent text-accent"
+                    : "bg-bg border-border text-text-secondary hover:bg-surface hover:text-text-primary"
+                }`}
+              >
+                0명만
+              </button>
+              <button
+                type="button"
+                onClick={() => setTrackListScope("all")}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors cursor-pointer ${
+                  trackListScope === "all"
+                    ? "bg-accent-light border-accent text-accent"
+                    : "bg-bg border-border text-text-secondary hover:bg-surface hover:text-text-primary"
+                }`}
+              >
+                전체
+              </button>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto min-h-0 space-y-1">
@@ -218,7 +254,9 @@ export default function MonitoringPage() {
               <div className="py-4 text-center text-xs text-text-tertiary">로딩 중...</div>
             ) : tracks.length === 0 ? (
               <div className="py-4 text-center text-xs text-text-tertiary">
-                보고인원 0명인 경로가 없습니다.
+                {trackListScope === "zeroOnly"
+                  ? "해당 날짜에 인원보고 0명인 운행 트랙이 없습니다. 「전체」로 전환해 보세요."
+                  : "해당 날짜의 운행 트랙이 없습니다."}
               </div>
             ) : (
               tracks.map((t) => (
@@ -326,8 +364,7 @@ export default function MonitoringPage() {
 
           {!loading && tracks.length === 0 && (
             <div className="mt-4 p-4 rounded-lg border border-dashed border-border bg-bg text-center text-sm text-text-tertiary">
-              Firestore <code className="px-1.5 py-0.5 bg-surface rounded text-text-secondary">tracks</code> 컬렉션에서
-              보고인원 0명인 데이터가 없습니다.
+              Firestore <code className="px-1.5 py-0.5 bg-surface rounded text-text-secondary">tracks</code>에 해당 날짜 데이터가 없거나, 날짜·인원보고 필터와 맞는 트랙이 없습니다.
             </div>
           )}
         </div>

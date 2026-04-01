@@ -1,23 +1,46 @@
 "use client";
 
-import { useState, useRef, useEffect, Fragment } from "react";
-import { Search, Send, Bell } from "lucide-react";
+import { useState, useRef, useEffect, Fragment, useCallback, useMemo } from "react";
+import { Search, Send, ImagePlus } from "lucide-react";
 import { getRooms, getMessages, getOlderMessages, sendMessage, subscribeToMessages, subscribeToRoomLastMessage } from "@/lib/firebase/firestore";
+import { uploadChatImage } from "@/lib/firebase/storage-chat";
+import {
+  getCachedMessagesForRoom,
+  saveCachedMessagesForRoom,
+  getCachedImage,
+  saveCachedImage,
+  mergeMessagesById,
+  mergedToSlices,
+} from "@/lib/chat-cache";
 import { getAvatarTheme } from "@/lib/mock-data";
 import type { Room, ChatMessage } from "@/lib/types";
+import { isMaintenanceLikeType, messageBodyForDisplay } from "@/lib/chat-message-body";
 import ChatReportAnomalyPanel from "@/components/ChatReportAnomalyPanel";
+import { useAuth } from "@/contexts/AuthContext";
 
-/** 당일: 시간, 전일: 어제, 그 이전: 요일 */
+function localYmd(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** 당일: 채팅 시간, 어제: 어제, 그 이전: M월D일 */
 function formatChatListTime(dateStr: string | null, timeStr: string | null): string {
-  if (!dateStr || !timeStr) return timeStr ?? "";
-  const days = ["일", "월", "화", "수", "목", "금", "토"];
-  const msgDate = new Date(dateStr + "T12:00:00");
-  const today = new Date();
-  const diffDays = Math.floor((today.getTime() - msgDate.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return timeStr;
-  if (diffDays === 1) return "어제";
-  if (diffDays < 7) return days[msgDate.getDay()];
-  return `${msgDate.getMonth() + 1}/${msgDate.getDate()}`;
+  if (!dateStr) return "";
+  const msgYmd = dateStr.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(msgYmd)) return timeStr?.trim() ?? "";
+
+  const todayYmd = localYmd(new Date());
+  if (msgYmd === todayYmd) return (timeStr ?? "").trim();
+
+  const y = new Date();
+  y.setDate(y.getDate() - 1);
+  if (msgYmd === localYmd(y)) return "어제";
+
+  const [, mo, da] = msgYmd.split("-").map((s) => parseInt(s, 10));
+  if (Number.isNaN(mo) || Number.isNaN(da)) return "";
+  return `${mo}월${da}일`;
 }
 
 /** 메시지가 속한 날짜 키 (YYYY-MM-DD) — date 필드 우선, 없으면 createdAt(로컬) */
@@ -39,6 +62,122 @@ function getMessageDayKey(msg: ChatMessage): string | null {
   return null;
 }
 
+/** Firestore에서 정규화된 imageUrl 또는 https URL */
+function chatImageUrl(msg: ChatMessage): string | null {
+  const u = (msg.imageUrl || "").trim();
+  if (u && /^https?:\/\//i.test(u)) return u;
+  return null;
+}
+
+function isImageCompatibleType(type: string | undefined): boolean {
+  const t = (type || "").toLowerCase();
+  return t === "image" || t === "text" || t === "photo" || t === "picture";
+}
+
+function ChatMessageImage({
+  roomId,
+  messageId,
+  remoteSrc,
+}: {
+  roomId: string | null;
+  messageId: string;
+  remoteSrc: string;
+}) {
+  const [displaySrc, setDisplaySrc] = useState<string | null>(null);
+  const [broken, setBroken] = useState(false);
+  const revokedRef = useRef<string | null>(null);
+  const onError = useCallback(() => setBroken(true), []);
+
+  useEffect(() => {
+    setBroken(false);
+    if (!roomId) {
+      setDisplaySrc(remoteSrc);
+      return;
+    }
+    let cancelled = false;
+    const prev = revokedRef.current;
+    if (prev) {
+      URL.revokeObjectURL(prev);
+      revokedRef.current = null;
+    }
+
+    (async () => {
+      const blob = await getCachedImage(roomId, messageId);
+      if (cancelled) return;
+      if (blob && blob.size > 0) {
+        const url = URL.createObjectURL(blob);
+        revokedRef.current = url;
+        setDisplaySrc(url);
+        return;
+      }
+      try {
+        const res = await fetch(remoteSrc, { mode: "cors", credentials: "omit" });
+        if (!res.ok) throw new Error(String(res.status));
+        const b = await res.blob();
+        if (cancelled) return;
+        await saveCachedImage(roomId, messageId, b);
+        const url = URL.createObjectURL(b);
+        revokedRef.current = url;
+        setDisplaySrc(url);
+      } catch {
+        if (!cancelled) setDisplaySrc(remoteSrc);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      const u = revokedRef.current;
+      if (u) {
+        URL.revokeObjectURL(u);
+        revokedRef.current = null;
+      }
+    };
+  }, [roomId, messageId, remoteSrc]);
+
+  const src = displaySrc ?? remoteSrc;
+  if (broken) {
+    return (
+      <div className="text-[11px] text-text-tertiary py-3 px-2 bg-bg rounded-lg border border-border text-center">
+        이미지를 불러올 수 없습니다.
+      </div>
+    );
+  }
+  return (
+    // Firebase Storage 등 동적 URL — next/image 도메인 등록 없이 표시
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt=""
+      className="rounded-md border border-border max-w-full max-h-[min(50vh,320px)] w-auto object-contain bg-bg"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={onError}
+    />
+  );
+}
+
+function ImageBubbleBody({
+  msg,
+  url,
+  roomId,
+}: {
+  msg: ChatMessage;
+  url: string;
+  roomId: string | null;
+}) {
+  const caption = msg.text?.trim();
+  return (
+    <div className="bg-bg rounded-lg px-2 py-2 border border-border overflow-hidden">
+      <ChatMessageImage roomId={roomId} messageId={msg.id} remoteSrc={url} />
+      {caption ? (
+        <div className="text-xs text-text-primary leading-relaxed mt-2 px-1 whitespace-pre-wrap break-words">
+          {caption}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ChatDateSeparator({ dayKey }: { dayKey: string }) {
   const parts = dayKey.split("-").map(Number);
   if (parts.length !== 3 || parts.some((n) => Number.isNaN(n))) return null;
@@ -54,15 +193,58 @@ function ChatDateSeparator({ dayKey }: { dayKey: string }) {
   );
 }
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+function MessageBubble({
+  msg,
+  roomId,
+  consoleUserId,
+}: {
+  msg: ChatMessage;
+  roomId: string | null;
+  /** 웹 콘솔 로그인 사용자 UID — 본인 전송 메시지(오른쪽 정렬) 판별 */
+  consoleUserId: string | null;
+}) {
   const theme = getAvatarTheme(msg.name);
 
   if (msg.type === "notice") {
+    const displayName = (msg.name || "").trim() || "관리자";
+    const noticeTheme = getAvatarTheme(displayName);
+    const isOwnNotice =
+      (consoleUserId != null && msg.userId === consoleUserId) ||
+      msg.name === "관리자" ||
+      msg.userId === "admin";
+    const noticeBody = (
+      <div className="bg-accent-light border border-accent/20 rounded-lg px-3 py-2 text-left">
+        <div className="text-[11px] font-semibold text-accent mb-1">공지</div>
+        <div className="text-xs text-text-primary whitespace-pre-wrap break-words">
+          {msg.text || "—"}
+        </div>
+      </div>
+    );
+    if (isOwnNotice) {
+      return (
+        <div className="flex justify-end mb-2">
+          <div className="max-w-[70%]">
+            <div className="text-[10px] text-text-tertiary mb-0.5 text-right">
+              {displayName} · {msg.time || "—"}
+            </div>
+            {noticeBody}
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className="flex justify-center my-2">
-        <div className="bg-accent-light text-accent text-[11px] font-medium px-4 py-2 rounded-lg max-w-[80%] text-center">
-          <div className="font-semibold mb-0.5">공지</div>
-          {msg.text}
+      <div className="flex gap-2 mb-2">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 mt-0.5"
+          style={{ background: noticeTheme.bg, color: noticeTheme.fg }}
+        >
+          {msg.avatar || displayName.charAt(0)}
+        </div>
+        <div className="max-w-[70%]">
+          <div className="text-[10px] text-text-tertiary mb-0.5">
+            {displayName} · {msg.time || "—"}
+          </div>
+          {noticeBody}
         </div>
       </div>
     );
@@ -128,18 +310,85 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
     );
   }
 
-  // 관리자 웹에서는 관리자(본인) 메시지를 오른쪽, 그 외는 왼쪽에 표시
-  const isAdminMessage = msg.name === "관리자" || msg.userId === "admin";
-  if (isAdminMessage) {
+  const raw = msg as unknown as Record<string, unknown>;
+  if (isMaintenanceLikeType(msg.type)) {
+    const structured = messageBodyForDisplay(raw);
+    const metaParts = [msg.name, msg.phone, msg.route, msg.car].filter(Boolean);
+    const lineText = structured || metaParts.join(", ") || "—";
+    return (
+      <div className="flex gap-2 mb-2">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 mt-0.5"
+          style={{ background: theme.bg, color: theme.fg }}
+        >
+          {msg.avatar || msg.name.charAt(0)}
+        </div>
+        <div className="max-w-[min(70%,420px)]">
+          <div className="text-[10px] text-text-tertiary mb-0.5">
+            {msg.name} · {msg.time}
+          </div>
+          <div className="bg-amber-50 border border-amber-200/80 rounded-lg px-3 py-2 dark:bg-amber-950/30 dark:border-amber-800/60">
+            <div className="text-[11px] font-semibold text-amber-800 dark:text-amber-200 mb-1">
+              🔧 정비·예약
+            </div>
+            <div className="text-xs text-amber-900/90 dark:text-amber-100/90 whitespace-pre-wrap break-words">
+              {lineText}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const imgUrl = chatImageUrl(msg);
+  const showImage = Boolean(imgUrl && isImageCompatibleType(msg.type));
+
+  // 웹 콘솔에서 보낸 메시지: userId 가 현재 로그인 UID 와 같거나, 레거시(이름 관리자 / userId admin)
+  const isOwnConsoleMessage =
+    (consoleUserId != null && msg.userId === consoleUserId) ||
+    msg.name === "관리자" ||
+    msg.userId === "admin";
+  if (isOwnConsoleMessage) {
+    if (showImage && imgUrl) {
+      return (
+        <div className="flex justify-end mb-2">
+          <div className="max-w-[min(70%,420px)]">
+            <div className="text-[10px] text-text-tertiary mb-0.5 text-right">
+              {msg.name} · {msg.time}
+            </div>
+            <ImageBubbleBody msg={msg} url={imgUrl} roomId={roomId} />
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex justify-end mb-2">
         <div className="max-w-[70%]">
           <div className="text-[10px] text-text-tertiary mb-0.5 text-right">
             {msg.name} · {msg.time}
           </div>
-          <div className="bg-accent-mid text-white rounded-lg px-3 py-2 text-xs leading-relaxed">
+          <div className="bg-accent-mid text-white rounded-lg px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words">
             {msg.text}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showImage && imgUrl) {
+    return (
+      <div className="flex gap-2 mb-2">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold shrink-0 mt-0.5"
+          style={{ background: theme.bg, color: theme.fg }}
+        >
+          {msg.avatar || msg.name.charAt(0)}
+        </div>
+        <div className="max-w-[min(70%,420px)]">
+          <div className="text-[10px] text-text-tertiary mb-0.5">
+            {msg.name} · {msg.time}
+          </div>
+          <ImageBubbleBody msg={msg} url={imgUrl} roomId={roomId} />
         </div>
       </div>
     );
@@ -157,8 +406,10 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
         <div className="text-[10px] text-text-tertiary mb-0.5">
           {msg.name} · {msg.time}
         </div>
-        <div className="bg-bg rounded-lg px-3 py-2 text-xs text-text-primary leading-relaxed">
-          {msg.text}
+        <div className="bg-bg rounded-lg px-3 py-2 text-xs text-text-primary leading-relaxed whitespace-pre-wrap break-words">
+          {msg.text?.trim() ||
+            messageBodyForDisplay(raw) ||
+            ((msg.type || "").toLowerCase() === "image" ? "사진(표시할 주소 없음)" : "")}
         </div>
       </div>
     </div>
@@ -166,15 +417,27 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 }
 
 export default function ChatPage() {
+  const { user } = useAuth();
+  const senderName = (user?.name ?? "").trim() || "관리자";
+  const consoleUserId = user?.uid ?? null;
+
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedRoom, setSelectedRoom] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [inputText, setInputText] = useState("");
-  const [messagesLatest, setMessagesLatest] = useState<ChatMessage[]>([]);
-  const [messagesOlder, setMessagesOlder] = useState<ChatMessage[]>([]);
-  const messages = [...messagesOlder, ...messagesLatest];
-  const [messageType, setMessageType] = useState<"text" | "notice">("text");
+  const [chatSlices, setChatSlices] = useState<{ older: ChatMessage[]; latest: ChatMessage[] }>({
+    older: [],
+    latest: [],
+  });
+  const messages = useMemo(
+    () => [...chatSlices.older, ...chatSlices.latest],
+    [chatSlices.older, chatSlices.latest]
+  );
   const [isSending, setIsSending] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isDraggingOverChat, setIsDraggingOverChat] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const chatDragDepthRef = useRef(0);
   const [roomLastMessage, setRoomLastMessage] = useState<Record<string, { lastMsg: string; time: string; date: string | null }>>({});
   const [unreadByRoom, setUnreadByRoom] = useState<Record<string, number>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -247,64 +510,163 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!selectedRoom) {
-      setMessagesLatest([]);
-      setMessagesOlder([]);
+      setChatSlices({ older: [], latest: [] });
       hasMoreOlderRef.current = true;
       return;
     }
-    const roomId = selectedRoom;
-    setMessagesOlder([]);
+    const roomIdStr = String(selectedRoom);
     hasMoreOlderRef.current = true;
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
 
-    async function loadMessages() {
+    (async () => {
       try {
-        const msgs = await getMessages(roomId.toString());
-        setMessagesLatest(msgs);
+        const cached = await getCachedMessagesForRoom(roomIdStr);
+        if (cancelled) return;
+        if (cached?.length) {
+          setChatSlices(mergedToSlices(cached));
+        }
+        const fromServer = await getMessages(roomIdStr);
+        if (cancelled) return;
+        const merged = mergeMessagesById(cached ?? [], fromServer);
+        setChatSlices(mergedToSlices(merged));
+
+        unsubscribe = subscribeToMessages(roomIdStr, (new50) => {
+          if (cancelled) return;
+          setChatSlices((prev) => {
+            const combined = mergeMessagesById([...prev.older, ...prev.latest], new50);
+            return mergedToSlices(combined);
+          });
+        });
       } catch (error) {
-        console.error("Error loading messages:", error);
+        if (!cancelled) console.error("Error loading messages:", error);
       }
-    }
-
-    loadMessages();
-
-    const unsubscribe = subscribeToMessages(roomId.toString(), (newMessages) => {
-      setMessagesLatest(newMessages);
-    });
+    })();
 
     return () => {
+      cancelled = true;
       if (unsubscribe) unsubscribe();
     };
   }, [selectedRoom]);
+
+  useEffect(() => {
+    chatDragDepthRef.current = 0;
+    setIsDraggingOverChat(false);
+  }, [selectedRoom]);
+
+  /** 메시지·이미지 재방문 시 IndexedDB에 유지 (디바운스) */
+  useEffect(() => {
+    if (!selectedRoom) return;
+    const merged = [...chatSlices.older, ...chatSlices.latest];
+    if (merged.length === 0) return;
+    const rid = String(selectedRoom);
+    const t = window.setTimeout(() => {
+      void saveCachedMessagesForRoom(rid, merged);
+    }, 500);
+    return () => window.clearTimeout(t);
+  }, [chatSlices, selectedRoom]);
 
   const handleSend = async () => {
     if (!inputText.trim() || !selectedRoom || isSending) return;
 
     setIsSending(true);
     const textToSend = inputText.trim();
-    const typeToSend = messageType;
     setInputText("");
-    setMessageType("text");
 
     try {
       const now = new Date();
-      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
       const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
       await sendMessage(selectedRoom.toString(), {
-        type: typeToSend,
+        type: "text",
         text: textToSend,
-        name: "관리자",
+        name: senderName,
         date,
         time,
       });
     } catch (error) {
       console.error("Error sending message:", error);
       setInputText(textToSend);
-      setMessageType(typeToSend);
     } finally {
       setIsSending(false);
     }
   };
+
+  const handleImageFiles = useCallback(
+    async (fileList: FileList | null) => {
+      if (!fileList || !selectedRoom || isUploadingImage) return;
+      const images = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+      if (images.length === 0) {
+        alert("이미지 파일만 업로드할 수 있습니다.");
+        return;
+      }
+      const captionFirst = inputText.trim();
+      setIsUploadingImage(true);
+      try {
+        const roomIdStr = selectedRoom.toString();
+
+        for (let i = 0; i < images.length; i++) {
+          const url = await uploadChatImage(roomIdStr, images[i]);
+          const now = new Date();
+          const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          const time = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+          await sendMessage(roomIdStr, {
+            type: "image",
+            imageUrl: url,
+            text: i === 0 && captionFirst ? captionFirst : undefined,
+            name: senderName,
+            date,
+            time,
+          });
+        }
+        if (captionFirst) setInputText("");
+      } catch (e) {
+        console.error(e);
+        const msg = e instanceof Error ? e.message : "이미지 업로드에 실패했습니다.";
+        alert(msg);
+      } finally {
+        setIsUploadingImage(false);
+      }
+    },
+    [selectedRoom, isUploadingImage, inputText, senderName]
+  );
+
+  const onChatDragEnter = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!Array.from(e.dataTransfer.types || []).includes("Files")) return;
+    chatDragDepthRef.current += 1;
+    setIsDraggingOverChat(true);
+  }, []);
+
+  const onChatDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    chatDragDepthRef.current -= 1;
+    if (chatDragDepthRef.current <= 0) {
+      chatDragDepthRef.current = 0;
+      setIsDraggingOverChat(false);
+    }
+  }, []);
+
+  const onChatDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const onChatDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      chatDragDepthRef.current = 0;
+      setIsDraggingOverChat(false);
+      if (!selectedRoom || isUploadingImage) return;
+      void handleImageFiles(e.dataTransfer.files);
+    },
+    [selectedRoom, isUploadingImage, handleImageFiles]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -332,7 +694,10 @@ export default function ChatPage() {
         if (older.length === 0) hasMoreOlderRef.current = false;
         else {
           didPrependOlderRef.current = true;
-          setMessagesOlder((prev) => [...older, ...prev]);
+          setChatSlices((prev) => {
+            const combined = mergeMessagesById(older, [...prev.older, ...prev.latest]);
+            return mergedToSlices(combined);
+          });
           requestAnimationFrame(() => {
             if (el) el.scrollTop = el.scrollHeight - prevScrollHeight;
           });
@@ -356,7 +721,7 @@ export default function ChatPage() {
             채팅 모니터링
           </h1>
           <p className="text-xs text-text-tertiary mt-1">
-            채팅방별 실시간 메시지 열람 및 발송
+            채팅방별 실시간 열람·텍스트 전송·사진 업로드(버튼·드래그) · 열람한 메시지·이미지는 브라우저에 캐시됩니다
           </p>
         </div>
       </div>
@@ -426,8 +791,24 @@ export default function ChatPage() {
         {/* Chat Messages */}
         <div className="bg-surface border border-border rounded-[10px] shadow-sm flex flex-col min-h-0">
           {selectedRoom ? (
-            <>
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+            <div
+              className={`flex flex-col flex-1 min-h-0 relative ${isDraggingOverChat ? "ring-2 ring-accent ring-inset rounded-[10px]" : ""}`}
+              onDragEnter={onChatDragEnter}
+              onDragLeave={onChatDragLeave}
+              onDragOver={onChatDragOver}
+              onDrop={onChatDrop}
+            >
+              {isDraggingOverChat && (
+                <div
+                  className="absolute inset-0 z-20 bg-accent/8 border-2 border-dashed border-accent rounded-[8px] m-1 flex items-center justify-center pointer-events-none"
+                  aria-hidden
+                >
+                  <span className="text-xs font-medium text-accent bg-surface/90 px-3 py-2 rounded-md shadow-sm">
+                    이미지를 여기에 놓으면 업로드됩니다
+                  </span>
+                </div>
+              )}
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
                 <div>
                   <div className="text-sm font-semibold text-text-primary">
                     {rooms.find((r) => r.id === selectedRoom)?.name || "채팅방"}
@@ -438,14 +819,14 @@ export default function ChatPage() {
                       ?.companies?.join(", ") || "전체"}
                   </div>
                 </div>
-                <span className="text-[10px] text-accent bg-accent-light px-2 py-1 rounded font-medium">
-                  관리자
+                <span className="text-[10px] text-accent bg-accent-light px-2 py-1 rounded font-medium max-w-[140px] truncate" title={senderName}>
+                  {senderName}
                 </span>
               </div>
               <div
                 ref={messagesScrollRef}
                 onScroll={handleScrollMessages}
-                className="flex-1 overflow-y-auto px-4 py-3"
+                className="flex-1 overflow-y-auto px-4 py-3 min-h-0"
               >
                 {messages.length > 0 &&
                   messages.map((msg, i) => {
@@ -455,7 +836,11 @@ export default function ChatPage() {
                     return (
                       <Fragment key={msg.id}>
                         {showDateSep && <ChatDateSeparator dayKey={dayKey} />}
-                        <MessageBubble msg={msg} />
+                        <MessageBubble
+                          msg={msg}
+                          roomId={String(selectedRoom)}
+                          consoleUserId={consoleUserId}
+                        />
                       </Fragment>
                     );
                   })}
@@ -463,47 +848,44 @@ export default function ChatPage() {
               </div>
 
               {/* Message Input */}
-              <div className="px-4 py-3 border-t border-border">
-                {messageType === "notice" && (
-                  <div className="flex items-center gap-1.5 mb-2 text-[10px] text-accent bg-accent-light px-2.5 py-1.5 rounded-md">
-                    <Bell size={11} />
-                    <span className="font-medium">공지 모드</span>
-                    <span className="text-text-tertiary">— 이 메시지는 공지로 전송됩니다</span>
-                    <button
-                      onClick={() => setMessageType("text")}
-                      className="ml-auto text-text-tertiary hover:text-text-primary cursor-pointer text-[10px]"
-                    >
-                      취소
-                    </button>
-                  </div>
-                )}
-                <div className="flex items-end gap-2">
+              <div className="px-4 py-3 border-t border-border shrink-0">
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="sr-only"
+                  aria-hidden
+                  onChange={(e) => {
+                    void handleImageFiles(e.target.files);
+                    e.target.value = "";
+                  }}
+                />
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setMessageType(messageType === "notice" ? "text" : "notice")}
-                    title="공지로 전환"
-                    className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-md border transition-colors cursor-pointer ${
-                      messageType === "notice"
-                        ? "bg-accent-light border-accent/30 text-accent"
-                        : "border-border-md text-text-tertiary hover:bg-bg hover:text-text-primary"
-                    }`}
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={isUploadingImage}
+                    title="사진 업로드"
+                    className="shrink-0 h-9 w-9 flex items-center justify-center rounded-md border border-border-md text-text-tertiary hover:bg-bg hover:text-text-primary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Bell size={14} />
+                    <ImagePlus size={16} />
                   </button>
-                  <div className="flex-1 relative">
+                  <div className="flex-1 relative min-w-0">
                     <textarea
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      placeholder="메시지를 입력하세요... (Enter로 전송, Shift+Enter로 줄바꿈)"
+                      placeholder="메시지 또는 사진 캡션… (Enter로 전송, Shift+Enter로 줄바꿈)"
                       rows={1}
-                      className="w-full px-3 py-2 border border-border-md rounded-lg font-sans text-[13px] text-text-primary outline-none focus:border-accent bg-surface resize-none max-h-[100px]"
-                      style={{ minHeight: "36px" }}
+                      className="w-full min-h-9 px-3 py-2 border border-border-md rounded-lg font-sans text-[13px] text-text-primary outline-none focus:border-accent bg-surface resize-none max-h-[100px] leading-[1.35]"
                     />
                   </div>
                   <button
+                    type="button"
                     onClick={handleSend}
                     disabled={!inputText.trim() || isSending}
-                    className={`shrink-0 w-8 h-8 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
+                    className={`shrink-0 h-9 w-9 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
                       inputText.trim()
                         ? "bg-accent text-white hover:bg-accent-dark"
                         : "bg-bg text-text-tertiary cursor-not-allowed"
@@ -512,8 +894,13 @@ export default function ChatPage() {
                     <Send size={14} />
                   </button>
                 </div>
+                {(isUploadingImage || isSending) && (
+                  <p className="text-[10px] text-text-tertiary mt-1.5">
+                    {isUploadingImage ? "이미지 업로드 중…" : "전송 중…"}
+                  </p>
+                )}
               </div>
-            </>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">

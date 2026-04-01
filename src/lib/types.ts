@@ -5,9 +5,27 @@ export interface User {
   company: string;
   driverId: string;
   role: "superAdmin" | "manager" | "driver";
+  /** Firestore `users.role` 원문 — 보안 규칙의 isSuperRole / isManagerRole 과 동일하게 판별 */
+  firestoreRole?: string;
+  /** Firestore `users.isAdmin` — 규칙상 isElevatedAdmin 에 포함 */
+  isAdminLegacy?: boolean;
   car?: string;
   pushToken?: string;
   updatedAt?: Date;
+}
+
+/** 관리자 기사·회원 목록 — Firestore `users` 컬렉션 기준 */
+export interface UserDirectoryRow {
+  uid: string;
+  name: string;
+  phone: string;
+  company: string;
+  driverId: string;
+  role: User["role"];
+  /** 표시용 아이디 (email · loginEmail · loginId · driverId · uid 순) */
+  displayId: string;
+  car?: string;
+  note?: string;
 }
 
 export interface Driver {
@@ -20,6 +38,12 @@ export interface Driver {
   note?: string;
   specialNote?: string;
   createdAt?: Date;
+  /** (선택) 앱 로그인용 이메일 형식 ID — DB에 있으면 표시 */
+  loginEmail?: string;
+  /** (선택) Firebase Auth UID 등 */
+  authUid?: string;
+  /** (선택) DB에 평문으로 남아 있으면 표시 */
+  loginPassword?: string;
 }
 
 export interface Room {
@@ -33,7 +57,17 @@ export interface Room {
   reportMode?: "normal" | "summary";
   adminOnly?: boolean;
   pinned?: boolean;
+  /** 레거시: 슬롯 분리 전 단일 배열 (앱은 timetable1Images 키 없을 때만 사용) */
   timetableImages?: string[];
+  /** 배차표1 — Firestore timetable1Images */
+  timetable1Images?: string[];
+  /** 배차표2 — Firestore timetable2Images */
+  timetable2Images?: string[];
+  /**
+   * getRooms에서만 설정. Firestore에 timetable1Images 또는 timetable2Images 키가 있으면 true (앱 RoomModel 파싱과 동일).
+   * 저장 시 제거해야 함.
+   */
+  timetableUsesSplitFields?: boolean;
   navLinks?: { label: string; url: string }[];
 }
 
@@ -55,6 +89,10 @@ export interface WorkspaceCalendarItem {
   startTime?: string;
   endTime?: string;
   done?: boolean;
+  /** 웹 콘솔에서 항목을 추가한 관리자 이름 */
+  createdByName?: string;
+  /** 할 일 완료 토글 등 마지막으로 수정한 관리자 이름 */
+  lastEditedByName?: string;
 }
 
 export interface Vehicle {
@@ -67,10 +105,23 @@ export interface Vehicle {
   note: string;
 }
 
+/** 관리자 웹 차량 관리 전용 — Firestore `config/vehicle_registry` 의 `items` 배열 요소 */
+export interface VehicleRegistryItem {
+  id: string;
+  company: string;
+  carNumber: string;
+  driverName: string;
+  phone: string;
+  note?: string;
+  /** 같은 소속(company) 안에서만 쓰는 표시 순서. 없으면 차량번호·성명으로 자동 정렬 */
+  orderInCompany?: number;
+}
+
 export interface ReportMessage {
   id: string;
   userId: string;
   name: string;
+  phone?: string;
   time: string;
   date: string;
   type: "report";
@@ -164,15 +215,23 @@ export interface Track {
   carNumber?: string;
   reportCount?: number; // 보고인원
   points?: TrackPoint[];
+  /** Firestore tracks.ownerUid */
+  ownerUid?: string;
+  roomId?: number | string;
+  isActive?: boolean;
 }
 
 export type NavPage =
   | "dashboard"
+  | "routeOperation"
   | "reports"
+  | "peakAnalysis"
   | "emergency"
   | "rooms"
   | "monitoring"
+  | "dispatch"
   | "drivers"
+  | "vehicleManagement"
   | "companies"
   | "notice"
   | "chat";
